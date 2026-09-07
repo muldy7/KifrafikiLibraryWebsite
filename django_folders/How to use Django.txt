@@ -1,0 +1,53 @@
+cd to folder location
+Starting the Server: python manage.py runserver
+
+tutorial videos:
+https://www.youtube.com/watch?v=l0QEGvAX8rU&t=135
+https://www.youtube.com/watch?v=Rp5vd34d-z4&t=601
+
+
+
+How to use Django
+
+have to start the server with python manage.py runserver (after I'm in the correct folder)
+
+seems complicated but once I learn this stuff it seems like a lot will be handled and easy to figure out
+
+also awesome because once the server is started it updates everything automatically if changes are made
+
+was exciting to get stuff working with Gradio and have a prototype but this is an awesome skill now yeah :)
+
+#NOTES
+url patterns page is for me to use to add different tabs to the website
+
+with the views is where i can do a bunch of stuff to give it a HTTP response
+
+I can make a custom template so I don't have to do all of that work in python
+
+template name spacing with multiple folders
+
+the render function?
+looks like once I get the basics figured out I can make it look nice with CSS and templates
+but I should go step by and step and can figure out the making it look nice and front end stuff later
+after I watch some good videos
+
+to-do
+1. how to set up the website and make it look nice
+2. how to do user accounts
+3. how to write stories 
+4. how to have clickable words that bring up a side panel
+5. how to attach my dictionary to the sql database
+6. how to have a vocabulary list that gets added to from the side panel
+7. how to allow users to edit definition entries
+
+things to include in my database of words (can copy that todaii website)
+- id
+- English
+- Swahili definition
+- date added
+- date change
+- change by user 
+- number of updates 
+- sentence example
+- part of speech
+- 

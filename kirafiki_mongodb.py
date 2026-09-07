@@ -5,6 +5,7 @@ import pandas as pd
 import string 
 from pymongo import MongoClient
 from free_dict_api import lookup_word
+from pymongo.errors import NetworkTimeout
 #from openpyxl import load_workbook as ld_book
 
 # MongoDB User information
@@ -15,7 +16,7 @@ from free_dict_api import lookup_word
 # BYgiV2Ysm8oK9y5u
 
 # Connect to MongoDB client
-client = MongoClient("mongodb+srv://abe_db_user:BYgiV2Ysm8oK9y5u@kirafikicluster.k0x7uss.mongodb.net/") # connect to online database
+client = MongoClient("mongodb+srv://abe_db_user:BYgiV2Ysm8oK9y5u@kirafikicluster.k0x7uss.mongodb.net/", timeoutMS = 2000) # connect to online database, with timeout
 db_dict = client["dictionary"]   # load the specific database
 
 # load the swahili to english collection
@@ -64,6 +65,9 @@ en_collection = db_dict["sw_en"]    # load the collection in the database
 # can look for a flash cards thing and translate that to excel and use that
 # going to stick with the csv file for now since I don't think google sheets is a final solution
 # google is kinda freaking out but if the MyMemory sucks too much I can get a free DeepL API key
+# also realizing it may be way esier to just make the website that has a couple stories and then I can figure out the translator later
+# I have no idea why there's a big ass space but it's okay since I have to go do this okay with django. I also think I like the click and bring up 
+# the side bar better, but maybe I can have some harder words with a kiswahili definition or english meaning. soething like that. 
 
 ## MONGO_DB
 # seems like this will be helpful becuase I can use compass to edit and it's probably way too powerful for what I need but hey I'm learning something
@@ -76,6 +80,7 @@ en_collection = db_dict["sw_en"]    # load the collection in the database
 # fully works with mongodb now and honestly not that slow the issue is just the translation takes some time. I could change it so it
 # bulk translates it but I don't think that's helpful becuase they the match would be a little difficult
 # I could add a export to excel feature for the vocab list which would be super cool
+#excel will definitely be better for testing since it's hosted locally
 
 # free dictionary api
 # realizing that omg I can just use the damn dictionary api for kiswahili since I'm going word by word and if that doesn't work go to google 
@@ -90,13 +95,20 @@ en_collection = db_dict["sw_en"]    # load the collection in the database
 #3. add the pop up to the right side of the screen and button functionality
 #4. add ability to add to dictionary and change definitions
 #5. ability to sign in and store vocabular list
+#6. think I should try building the website with django, then I can add a couple stories and articles with everything and the pop-ups and what not
+#   then I can try and see if I can build the vocab list and the clickable links. Then once all that is working I can do the translator.
+#   but a couple stories and a vocab list will keep me damn entertained and I can't figure out the pop-up now since I'm guessing it will be different
+#   I should also lean how the freak CSS and HTML works
 
 def add_mongodb(word,definition):
     # create a new entry
     new_entry = {'WORD': word,'DEFINITION': definition} # user id will be completed automatically 
 
     # insert into mongodb
-    en_collection.insert_one(new_entry)
+    try:    # skip if there's a timeout error
+        en_collection.insert_one(new_entry)
+    except NetworkTimeout:
+        print("Can't add to MongoDB")
 
     return 
 
@@ -125,8 +137,13 @@ def translate(text):
     # Look up in Swahili dictionary first
     #definition = dict_en.get(clean_text) 
 
+    print("checking MondoDB") # have to remember to add IP Addresss
     # use MongoDB to find in swahili to engish collection
-    doc = en_collection.find_one({"WORD": clean_text})  #find the document in the database
+    try:
+        doc = en_collection.find_one({"WORD": clean_text})  #find the document in the database with a timeout
+    except NetworkTimeout:
+        doc = None
+    #doc = None # use if MongoDB is being difficult
     #print(doc)
     
     if doc is None: # will output if None not found in MongoDB
@@ -181,10 +198,21 @@ def generate_hoverable_text(input_text):
     for word in words:
         #clean_text = word.strip(string.punctuation)
         definition = translate(word)
+        word_url = f"https://en.wiktionary.org/wiki/{word}#Swahili"
 
-        # Wrap the word in a span with custom tooltip attributes
-        hover_html = f'<span class="tooltip-target" data-tooltip="{definition}">{word}</span>'
-        html_output.append(hover_html)
+        # add a clickable link to the text 
+        link_html = (
+            f'<div class="tooltip-wrapper">'
+            f'  <a href="{word_url}" target="_blank" class="clickable-text-word">{word}</a>'
+            f'  <span class="tooltip-box">{definition}</span>'
+            f'</div>'
+        )
+        
+        html_output.append(link_html)
+
+        # Wrap the word in a span with custom tooltip attributes to add the hover for html
+        #hover_html = f'<span class="tooltip-target" data-tooltip="{definition}">{word}</span>'
+        #html_output.append(hover_html)
         
     return " ".join(html_output)
 
@@ -192,12 +220,14 @@ def generate_hoverable_text(input_text):
 # 2. Add custom CSS for a beautiful popup design
 # thanks AI this is helpful for changing the design 
 #removed the underline
+# this is the style sheet for what I'm looking at 
 #text-decoration: underline dashed #3122ff;
+# this CSS stuff I don't super understand but I can find good documentation on it
 
 custom_css = """
 .tooltip-container {
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.6; //
 }
 .tooltip-target {
     
@@ -206,41 +236,66 @@ custom_css = """
     position: relative;
     display: inline-block;
 }
-/* Tooltip styling */
-.tooltip-target::after {
-    content: attr(data-tooltip);
+/* Wrapper container for each word */
+.tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-right: 0px; /* Space between words */
+}
+
+/* The clickable word link */
+.clickable-text-word {
+    color: #00A3DD; 
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-block;
+    transition: color 0.2s ease;
+}
+
+.clickable-text-word:hover {
+    color: #01596b; /* Translated text hover color */
+}
+
+/* Tooltip popup box styling */
+.tooltip-box {
+    visibility: hidden;
+    width: 100px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: normal;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    
+    /* Position directly above the word */
     position: absolute;
-    bottom: 125%;
+    bottom: 125%; 
     left: 50%;
     transform: translateX(-50%);
-    background-color: #333;
-    color: #fff; /* text in pop-up color */
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    white-space: normal;
-    width: 220px;
-    z-index: 100;
+    
+    /* Forces Gradio to render it on top of other words/rows */
+    z-index: 99999 !important; 
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease-in-out;
-    box-shadow: 0px 4px 10px rgba(0,0,0,0.25);
+    transition: opacity 0.2s ease-in-out, visibility 0.2s;
 }
-/* Show tooltip on hover */
-.tooltip-target:hover::after {
+
+/* Show tooltip when hovering anywhere over the word wrapper */
+.tooltip-wrapper:hover .tooltip-box {
+    visibility: visible;
     opacity: 1;
 }
 
+/* Your button styles */
 #green_btn {
     background-color: #1EB53A !important;
     color: white !important;
 }
 #green_btn:hover {
     background-color: #1b9e33 !important;
-}
-
-.tooltip-target:hover {
-    color: #01596b; /* translated text hover color */
 }
 """
 
