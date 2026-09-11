@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{%static 'global.css'%}">
+    <title>{% block title %}Kirafiki Swahili Learning{% endblock %}</title>
+    <!-- Link your CSS stylesheets here -->
+</head>
+<body>
+
+    <!-- Shared Navigation Navbar -->
+    <!-- easy to add stuff to the navigation bar with just their basic link -->
+    <nav>
+        <a href="/">Home</a> | 
+        <a href="/site_content/">Articles</a> | 
+        <a href="/dictionary/">Dictionary</a> | 
+        <a href="/dictionary/add-content/">Add Content Tool</a> | 
+        <a href="/about/">About</a> | 
+        <a href="/admin/">Admin</a>
+    </nav>
+
+    <!-- MESSAGES WILL GO HERE -->
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                    {{ message }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- Main Content Block -->
+    <main class="container">
+        {% block content %}
+        <!-- Child templates will inject their content here -->
+        {% endblock %}
+    </main>
+
+    <!-- Shared Footer -->
+    <footer>
+        <p>&copy; Kirafiki Website 2026</p>
+    </footer>
+
+    <!-- Link your JavaScript files here -->
+</body>
+</html>

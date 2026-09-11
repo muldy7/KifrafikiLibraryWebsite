@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'dictionary.apps.DictionaryConfig',
     'site_content.apps.SiteContentConfig',
+    'core.apps.CoreConfig'
 ]
 
 MIDDLEWARE = [
@@ -57,7 +58,7 @@ ROOT_URLCONF = 'kirafiki_website.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR,'templates')], # added gloabl template for base.html
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -126,6 +127,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# add global CSS file for making the website
+STATICFILES_DIRS = [
+    BASE_DIR / "staticfiles"
+]
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -138,5 +144,6 @@ MAILERS = {
 
 # user model I created in a seperate app
 # will help when I want to do the vocabulary page and changing the definitions
+# for now nothing should do that much
 AUTH_USER_MODEL = 'accounts.CustomUser'
 

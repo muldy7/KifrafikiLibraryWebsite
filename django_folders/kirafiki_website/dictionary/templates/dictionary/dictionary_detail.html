@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<article class="entry-detail">
+  <h1>{{ object.swahili_entry }}</h1>
+  <p class="english"><strong>English:</strong> {{ object.english }}</p>
+  <p class="pos"><strong>Part of speech:</strong> {{ object.part_of_speech }}</p>
+
+  <section>
+    <h2>Definition (Kiswahili)</h2>
+    <p>{{ object.swahili_definition }}</p>
+  </section>
+
+  <section>
+    <h2>Example Sentence</h2>
+    <p>{{ object.sentence }}</p>
+  </section>
+
+  <section>
+    <h2>Construction</h2>
+    <p>{{ object.construction }}</p>
+  </section>
+
+  <footer class="meta">
+    <p>Added: {{ object.date_added }}{% if object.user_added %} by {{ object.user_added.username }}{% endif %}</p>
+    <p>Last modified: {{ object.date_modified }}{% if object.user_modified %} by {{ object.user_modified.username }}{% endif %}</p>
+
+    <!-- see if we got a link or just text from the source (target = "_blank" means it will open in new tab)-->
+    <p>Source: {%if "https" in object.translation_source %} <a href={{object.translation_source}} target="_blank">en.wiktionary.org</a> {% else %} {{object.translation_source}} {% endif %}</p>
+  </footer>
+  <a href="{% url 'dictionary:update-entry' slug=object.slug %}" class="button">Update Entry</a> | <a href="{% url 'dictionary:delete-entry' slug=object.slug %}" class="button">Delete Entry</a> 
+  <p></p>
+  <!-- have to add dictionary: or it won't understand where it's supposed to get the template from -->
+  <a href="{% url 'dictionary:dictionary-list' %}">&larr; Back to dictionary</a> 
+</article>
+{% endblock %}

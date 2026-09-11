@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Kiswahili Dictionary</h1>
+
+<ul class="entry-list">
+  {% for entry in dictionary_list %}
+    <li>
+      <a href="{% url 'dictionary:dictionary-detail' entry.slug %}">
+        <strong>{{ entry.swahili_entry }}</strong> — {{ entry.english }}
+      </a>
+      <span class="pos">({{ entry.part_of_speech }})</span>
+    </li>
+  {% empty %}
+    <li>No entries yet.</li>
+  {% endfor %}
+</ul>
+
+{% if is_paginated %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

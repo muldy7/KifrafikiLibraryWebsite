@@ -1,0 +1,11 @@
+
+/* global CSS file to be imported to other templates */
+/* imported to base.html with <link rel="stylesheet" href="{%static 'global.css'%}"> */
+h1 a, h2 a {
+    color: #00c28b;
+}
+
+body {
+    padding-left: 15px;
+    background-color: white;
+}

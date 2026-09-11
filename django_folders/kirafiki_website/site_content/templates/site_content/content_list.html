@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Stories</h1>
+
+<ul>
+    {% for content in stories %}
+        <li>
+            <a href="{% url 'site_content:content-detail' content.slug %}">{{ content.title }}</a>
+            &mdash; {{ content.pub_date }} by {{ content.author }}
+        </li>
+    {% empty %}
+        <li>No stories yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

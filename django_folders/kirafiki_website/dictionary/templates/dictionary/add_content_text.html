@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+<!-- this is step one where the text can be entered -->
+{% block content %}
+<h1>Add New Content (Story, Article, etc.)</h1>
+
+{% if messages %}
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'dictionary:add-content' %}">
+    {% csrf_token %}
+    {# csrf_token protects against cross-site request forgery — required on every Django POST form #}
+
+    {# This hidden field is how the view knows we're on step 1 #}
+    <input type="hidden" name="stage" value="submit_text">
+
+    <label for="content_title">Title:</label>
+    <input type="text" id="content_title" name="content_title" required value="{{ content_title }}">
+
+    <!-- damn the code was fine just needed to check and make sure it all says "content" -->
+    <label for="content_body">Story text (Kiswahili):</label>
+    <textarea id="content_body" name="content_body" rows="10" required>{{ content_body }}</textarea>
+
+    <!-- add fields for the level and the source -->
+     <!-- probably want to make this a dropdown form at some point -->
+     <!-- could have this attached to the model but for now this will be easy--> 
+    <!-- this works super well and easy just need to remember it won't update itself -->
+    <label for="content_level">Choose a level:</label>
+
+    <!-- made it required just to make it easy -->
+    <!-- name is what is getting looked up by the view so I have to make sure that's write -->
+    <select name="content_level" id="content_level" required> 
+        <!-- Empty value makes 'required' work perfectly -->
+        <option value="" {% if not content_level %}selected{% endif %}>--Please choose an option--</option>
+        
+        <!-- Checks if the view passed back this specific value to keep it selected -->
+        <option value="B" {% if content_level == "B" %}selected{% endif %}>Beginner</option>
+        <option value="I" {% if content_level == "I" %}selected{% endif %}>Intermediate</option>
+        <option value="A" {% if content_level == "A" %}selected{% endif %}>Advanced</option>
+        <option value="N" {% if content_level == "N" %}selected{% endif %}>News Article</option>
+    </select>
+
+    <!-- have to put in "value" if i want the content to be retained -->
+    <label for="content_source">Content Source (paste link):</label>
+    <input type="text" id="content_source" name="content_source" value="{{ content_source }}">
+
+    <button type="submit">Continue to Word Review</button>
+</form>
+{% endblock %}
