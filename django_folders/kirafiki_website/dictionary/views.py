@@ -3,6 +3,7 @@ from django.views.generic import ListView, DetailView
 from django.contrib.messages.views import SuccessMessageMixin # used for messages in class-based views
 from .services import translate_word # from services.py file for the translate function
 from .models import DictionaryEntry
+from django.contrib.auth.mixins import LoginRequiredMixin
 import re
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -28,6 +29,7 @@ class DictionaryListView(ListView):
     ordering = ["swahili_entry"] # order alphabetically 
  
 # just copied this over from from views in site_content since it's super similar 
+# this page REQUIRES LOGIN
 class DictionaryDetailView(DetailView):
     """Shows a single word, looked up by its slug."""
     model = DictionaryEntry # from the site_content model page
@@ -38,7 +40,7 @@ class DictionaryDetailView(DetailView):
 
 # these classes are still very customizable which is nice
 # copied from the django documentation, this helps me change fields, would be easy to add a create button but think it's better to do that through the stories
-class DictionaryUpdateView(SuccessMessageMixin,UpdateView): # success message has to go to the left
+class DictionaryUpdateView(SuccessMessageMixin,LoginRequiredMixin, UpdateView): # success message has to go to the left
     model = DictionaryEntry
     form_class = DictionaryUpdateForm
     #fields = ["swahili_entry", "english","part_of_speech", "swahili_definition","sentence", "construction", "translation_source"] no need since we are using form class
@@ -77,7 +79,7 @@ class DictionaryUpdateView(SuccessMessageMixin,UpdateView): # success message ha
         return super().form_valid(form)
 
 # delete view class from the django documentation
-class DictionaryDeleteView(SuccessMessageMixin,DeleteView):
+class DictionaryDeleteView(SuccessMessageMixin,LoginRequiredMixin,DeleteView):
     model = DictionaryEntry
     success_url = reverse_lazy("dictionary:dictionary-list") # can't forget the app name
     success_message = "Entry deleted successfully" # this will get shown at the top of the list view

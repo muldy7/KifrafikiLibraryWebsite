@@ -89,12 +89,6 @@
     <button type="submit">Save Content &amp; Words</button>
 </form>
 
-<datalist id="translation_source_options">
-    {% for choice in formset.forms.0.fields.translation_source.choices_list %}
-        <option value="{{ choice }}"></option>
-    {% endfor %}
-</datalist>
-
 <script>
 document.querySelector("table").addEventListener("click", async (e) => {
     if (!e.target.classList.contains("translate-btn")) return;

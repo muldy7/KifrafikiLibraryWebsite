@@ -147,3 +147,7 @@ MAILERS = {
 # for now nothing should do that much
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
+#LOGIN_URL = 'login'  # Can be a URL path or the name of your login URL route
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'

@@ -46,6 +46,22 @@ def create_basic_form_data(test_entry, test_english):
 
     return form_data
 
+def create_content_form_data(title, content):
+    """
+    This function creates a data field to be used to "POST" to the content tool form for testing
+    The function needs to receive text for "title" and "content"
+    """
+    # can add things if more a required for the form 
+    form_data = {
+        "content_title": title,
+        "content_body": content,
+        "content_level": "B",
+        "content_source": "no source found",
+        "stage":"save_content" # have to include the stage since there is no redirect
+    }
+
+    return form_data
+
 def create_user(self,username):
     """
     This function creates a user so it can be used with the form that requires a user sign in
@@ -140,6 +156,32 @@ class DictionaryEntryModelTests(TestCase):
             create_basic_entry("?<>':ng'ombe;';") # this should still refuse a save
             create_basic_entry("ngombe") # this should still refuse a save since ngombe is the slug
 
+class DictionaryEntryUserTests(TestCase):
+    """
+    This test class is for all tests that require a user login 
+    This class uses the built in setUpTestData() function to increase the speed of the tests
+    """
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Set up function that will be run automatically ONCE then all the tests are done
+        Best from read-only data that can't be modified
+        """
+        # set up a basic user for all tests
+        CustomUser = get_user_model()
+        cls.user = CustomUser.objects.create_user(username="test_user", password="password123")
+
+    def setUp(self):
+        """
+        This code is done before EVERY test 
+        """
+        # log the user in since it was getting messed up in setUpTestData
+        self.client.login(username="test_user", password="password123") 
+
+        return super().setUp()
+
+
+    
     # for update view can test if date modified changes, if date added doesn't change, if date modified doesn't change
     # if nothing is changed, if a new entry is refused if there is a similar word with 
     # punctuation or upper case
@@ -149,8 +191,6 @@ class DictionaryEntryModelTests(TestCase):
         Date modified should also changed 
         Publish date should not change
         """
-        # have to log in a user for them to enter data with the form
-        create_user(self,"testuser")
 
         # test looking at the website page
         test_entry = create_past_entry("test") # test a word like ngombe using the past function so the date is in the past
@@ -191,7 +231,7 @@ class DictionaryEntryModelTests(TestCase):
         This should NOT be refused since the case and punctuation will be stripped automatically
         """
         # have to log in a user for them to enter data with the form
-        create_user(self,"testuser")
+        # create_user(self,"testuser") <--- done in setUp()
 
         # test looking at the website page
         test_entry = create_past_entry("test") # test a word like ngombe using the past function so the date is in the past
@@ -219,8 +259,6 @@ class DictionaryEntryModelTests(TestCase):
         """
         Test to see if the form doesn't change user modified if nothing was changed in the form and it was just opened and entered
         """
-        # have to log in a user for them to enter data with the form
-        create_user(self,"testuser")
 
         # test looking at the website page
         test_entry = create_past_entry("test") # test a word like ngombe using the past function so the date is in the past
@@ -257,7 +295,7 @@ class DictionaryEntryModelTests(TestCase):
 
         """
         # have to log in a user for them to enter data with the form
-        create_user(self,"testuser")
+        # create_user(self,"testuser")  <--- done in setUp()
 
         # test looking at the website page
         create_past_entry("test") # make a entry that's to compare against
@@ -271,23 +309,6 @@ class DictionaryEntryModelTests(TestCase):
         response = self.client.post(url, data = form_data)
         self.assertEqual(response.status_code, 200) # make sure it was the change was denied
 
-    # TEST NUMBER 13
-    def test_no_user(self):
-        """
-        This test checks to make sure that the form for dictionary view doesn't work if the user isn't logged in 
-        """
-    
-         # test looking at the website page
-        test_entry = create_past_entry("test") # make a entry that's to compare against
-
-        # get url for the update entry page
-        url = reverse("dictionary:update-entry", kwargs={"slug": test_entry.slug}) # including reverse in the url
-    
-        # update with post 
-        form_data = create_basic_form_data("test","test basic") 
-        with self.assertRaises(ValueError):
-            self.client.post(url, data=form_data) # this should be denied since there is no user logged in 
-
     # TEST NUMBER 14
     def test_different_users(self):
         """
@@ -299,7 +320,7 @@ class DictionaryEntryModelTests(TestCase):
 
         """
         # create the first user
-        create_user(self,"testuser")
+        # create_user(self,"testuser")  <--- done in setUp()
 
         # test looking at the website page
         test_entry = create_past_entry("test") # make a entry that's to compare against
@@ -337,31 +358,193 @@ class DictionaryEntryModelTests(TestCase):
         self.assertNotEqual(date_added,date_modified)
 
     # TEST NUMBER 15
-    def test_no_user_save(self):
+    def test_user_save(self):
         """
         This test makes sure that a basic save() doesn't add the user which may mess things up in the future
 
         """
         # create the first user
-        create_user(self,"testuser")
+        #create_user(self,"testuser") <--- done in setUp()
 
         # test looking at the website page
         test_entry = create_past_entry("test") # make a entry that's to compare against
         #self.assertEqual(test_entry.date_added, None) don't super care about date added that can be the date it gets confirmed by an admin
-        self.assertEqual(test_entry.user_added, None)
+        self.assertEqual(test_entry.user_added, None)   
+
+    # DELETE VIEW TEST
+    def test_delete_view(self):
+        """
+        Test to see if the delete view works as expected
+        """
+        test_entry = create_past_entry("test") # test a word like ngombe using the past function so the date is in the past
+
+        # get url for the update entry page
+        url = reverse("dictionary:delete-entry", kwargs={"slug": test_entry.slug}) # including reverse in the url
+
+        # test that it opens the delete confirmation page
+        response = self.client.get(url)
+        self.assertContains(response, "Are you sure you want to delete")
+
+        # test delete case using post
+        response = self.client.post(url) # post to make sure it deletes
+        self.assertEqual(response.status_code, 302) # should respond with 302 to redirect and delete the strings
+
+        # make sure the entry no longer exists
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404) # need to use status code oops
+
+
+# NO USER TEST CLASS
+class DictionaryEntryAnonymousUserTests(TestCase):
+    """
+    Tests to be done if there is no user logged in
+    """
+    # TEST NUMBER 13
+    def test_no_user_update_view(self):
+        """
+        This test checks to make sure that the form for dictionary view doesn't work if the user isn't logged in 
+        """
     
+         # test looking at the website page
+        test_entry = create_past_entry("test") # make a entry that's to compare against
+
+        # get url for the update entry page
+        url = reverse("dictionary:update-entry", kwargs={"slug": test_entry.slug}) # including reverse in the url
+
+        # now the user can't even access the page
+        response = self.client.get(url)
+
+        # user will be automatically redirected
+        self.assertEqual(response.status_code, 302) # <--- 302 for a redirect
+
+    def test_no_user_update_view(self):
+        """
+        This test checks to make sure that the form for dictionary deleting of a word doesn't work if the user isn't logged in 
+        """
+    
+        # test looking at the website page
+        test_entry = create_past_entry("test") # make a entry that's to compare against
+
+        # get url for the update entry page
+        url = reverse("dictionary:delete-entry", kwargs={"slug": test_entry.slug}) # including reverse in the url
+
+        # now the user can't even access the page
+        response = self.client.get(url)
+
+        # user will be automatically redirected
+        self.assertEqual(response.status_code, 302) # <--- 302 for a redirect
+
+    # TEST NUMBER 17
+    def test_content_tool_no_user(self):
+        """
+        This test ensures that the content tool cannot be used if a user is not logged in
+        """
+
+        # try accessing the website
+        response = self.client.get(reverse("dictionary:add-content"))
+
+        # user will be automatically redirected
+        self.assertEqual(response.status_code, 302) # <--- 302 for a redirect
+
+
+        # need to add two tests and see if it blocks a user from entering 
+        # the content entry tool and the update view page if they aren't signed in 
+        # they should be redirected
+        # i'll also see if it breaks any of my tests. Wow tests are so cool!
+        # need to test the delete page as well
+
+
+# CONTENT ENTRY TOOL TEST CLASS
+class ContentEntryToolTests(TestCase):
+    """
+    Test class for tests involving the content entry tool
+    This content tool uses both the DictionaryEntry and Content models but the testing is done in this page
+    """
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Set up function that will be run automatically ONCE then all the tests are done
+        Best from read-only data that can't be modified
+        """
+        # set up a basic user for all tests
+        CustomUser = get_user_model()
+        cls.user = CustomUser.objects.create_user(username="test_user", password="password123")
+
+    def setUp(self):
+        """
+        This code is done before EVERY test 
+        """
+        # log the user in since it was getting messed up in setUpTestData
+        self.client.login(username="test_user", password="password123") 
+
+        return super().setUp()    
+
+    # test content tool exists
+    # TEST NUMBER 18
+    def test_content_tool(self):
+        """
+        This is a basic initial test to make sure the content entry page can be accessed
+        """
+        # try accessing the website
+        response = self.client.get(reverse("dictionary:add-content"))
+        
+        # user will should be sent to the website
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Add New Content")
+
+    def test_content_tool_post(self):
+        """
+        Test if the content tool redirects to the add words page
+        """
+        url = reverse("dictionary:add-content")
+        data_entry = create_content_form_data("test","test")
+
+        # submit the form with the data entry
+        response = self.client.post(url, data_entry) # <---- have to remeber the stage for the form to submit correctly that's nifty smart
+        self.assertEqual(response.status_code, 200)  # <---- will post a 200 if the post works correctly
+        self.assertContains(response, "Review Words")
+
+        # make sure the new content wasn't yet added to the database
+        with self.assertRaises(DictionaryEntry.DoesNotExist):
+            DictionaryEntry.objects.get(swahili_entry='test')
+
+        
+
+        # testing this will be tricky because on the first stage we need to make sure the slug doesn't match, but I guess that won't be too hard
+        # to test without saving I think I already figured that out didn't i
+        # this testing is definitely teaching me how everything works damn those developers
+        # it may be tricking while testing this because there is no redirect but we will see what happens
+
+        # test to see if we're on the new page now
+        #response = self.client.get(url)
+        
+
+        
+        # will be a 200 if the post worls correctly
+        # this is because its not a redirect but just changes the view which is good. 
+        # A user can't go directly to the add words page
+
+
+# add stuff for the delete views as well. 
 
 # can add tests for the content entry form tooooooo ooff I'll make that as a new class though
 
 # I'll add a Class here for the content submission tool. I can use the setUp() to make sure a user is automatically logged in
-    # 1. I'll have to add one test above to make sure it can't be accessed without a user login
+    # 1. I'll have to add one test above to make sure it can't be accessed without a user login (DONE)
     # 2. can test some stuff with the translation tool here too
     # 3. man this is a lot of work but so freaking awesome it's cool to see everything working well and know I have cracks filled
     # 4. lezyne really made me value doing a bunch of testing and i'm finding stuff
-    
+    # 5. punctuation can stay in the title but not the string so we'll have to take a look at just the slug and test that, if the strong is 
+    #    different we'll make them look at a seperate title
+    #    using login in the setUp but making in the user in create the test data seemed to serioulsy speed things up!
+    #    lets try and do the basic test entry in test data next time but don't need to do anything now
+    #    when a user presses the "add content tool" it should ask them to login, I should probably just do that to the update content button that's easier hmm
+
+        # steps
+        # add log in page
+        # change forms I guess
+        # okay I added a log in page and once I add "user required" it may mess some things up
+        # the update and content user tool should be user only, so let's go make the changes to that
+
 
     
-
-
-    
-        

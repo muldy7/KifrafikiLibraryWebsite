@@ -70,16 +70,9 @@ class DictionaryEntryForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # what is done when the form saves
+        # the only real thing that causes problems is when changing the name of the swahili_entry
+        # for now don't need to add cleaning of the other forms I feel like
+
         super().__init__(*args, **kwargs)
-        
-        # 1. Bring back your TextChoices to use as suggestions
-        dropdown_suggestions = [choice[0] for choice in DictionaryEntry.TransSource.choices]
-        
-        # 2. Change the widget to a TextInput linked to an HTML <datalist>
-        self.fields['translation_source'].widget = forms.TextInput(attrs={
-            'list': 'translation_source_options',
-            'placeholder': 'Select or type custom source...'
-        })
-        
-        # 3. Inject the options into the form instance metadata
-        self.fields['translation_source'].choices_list = dropdown_suggestions
+      

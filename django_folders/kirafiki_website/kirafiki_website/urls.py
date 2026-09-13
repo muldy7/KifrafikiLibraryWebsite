@@ -20,8 +20,11 @@ from django.urls import path, include
 # have to add the urls from each app to the global urls.py
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')), # add basic login page
     path('site_content/', include('site_content.urls')),
     path('dictionary/', include('dictionary.urls')),
     path('', include('core.urls')),
     #path('add-content/', include('dictionary.urls')),
 ]
+
+

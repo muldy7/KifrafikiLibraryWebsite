@@ -26,18 +26,11 @@ class DictionaryEntry (models.Model):
     user_added = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="user_added")
     user_modified = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="user_modified")
 
-    # field for source from the translation 
-    class TransSource(models.TextChoices):
-          GOOGLE = 'GoogleTranslateAPI'    # what to choose incase it comes from a google translate API call
-          FREE_DICT = 'FreeDictionaryAPI'    # free dictionary online api
-          USER_ADDED = 'UserAdded'         # choose this if it was manually changed by a user
-          #DEFAULT = 'D','No Source Found'      # think user added just makes this simplier
-
     # writing if the word was from a user manual entry or an api call
     translation_source = models.CharField(
         max_length=200,
         #choices=TransSource.choices, want to have custom entry too
-        default=TransSource.USER_ADDED,
+        default='User Added',
         )
 
     # have to add slug field for the word

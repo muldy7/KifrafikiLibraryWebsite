@@ -1,0 +1,35 @@
+<!-- templates/registration/login.html -->
+<!-- this is a basic template that creates the log in page -->
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+</head>
+<body>
+
+    <h2>Login to Your Account</h2>
+
+    <!-- Display errors if the user enters wrong credentials -->
+    {% if form.errors %}
+        <p style="color: red;">Your username and password didn't match. Please try again.</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %} <!-- Required security token by Django -->
+        
+        <!-- Renders the username and password fields automatically -->
+        {{ form.as_p }} 
+        
+        <button type="submit">Log In</button>
+    </form>
+
+</body>
+</html>
+
+{% endblock %}
