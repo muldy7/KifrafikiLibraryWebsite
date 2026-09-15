@@ -3,16 +3,8 @@
 {% block content %}
 <h1>Add New Content (Story, Article, etc.)</h1>
 
-{% if messages %}
-    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
-        {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    </div>
-{% endif %}
+<!-- add a paragraph gap -->
+ <p></p>
 
 <form method="post" action="{% url 'dictionary:add-content' %}">
     {% csrf_token %}
@@ -48,9 +40,10 @@
     </select>
 
     <!-- have to put in "value" if i want the content to be retained -->
+    <!-- who knows how we license this stuff we may need more control  -->
     <label for="content_source">Content Source (paste link):</label>
-    <input type="text" id="content_source" name="content_source" value="{{ content_source }}">
-
+    <input type="text" id="content_source" name="content_source" value="{{ content_source|default:'UserAdded'}}">
+    <p></p>
     <button type="submit">Continue to Word Review</button>
 </form>
 {% endblock %}

@@ -4,6 +4,8 @@ from django.views.generic.edit import UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from .models import Content
 from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .forms import ContentUpdateForm
  
  
 class ContentListView(ListView):
@@ -23,11 +25,12 @@ class ContentDetailView(DetailView):
     slug_url_kwarg = "slug"    # the URL keyword argument name (must match urls.py below)
 
 # more generic views for update and deleting content 
-class ContentUpdateView(SuccessMessageMixin,UpdateView): # success message has to go to the left
+class ContentUpdateView(SuccessMessageMixin,LoginRequiredMixin,UpdateView): # success message has to go to the left
     model = Content
-    fields = ["title", "content","level", "source"]
+    form_class = ContentUpdateForm
+    #fields = ["title", "content","level", "source"]
     template_name_suffix = "_update_form"
-    success_message = "Entry updated successfully"
+    success_message = "Content updated successfully"
 
     def get_success_url(self):
         # Extract the slug parameter from the current incoming URL
@@ -40,14 +43,14 @@ class ContentUpdateView(SuccessMessageMixin,UpdateView): # success message has t
     # can do this even in class view
     def form_valid(self, form):
         # 1. Access the model instance attached to the form but don't commit to DB yet
-        self.object = form.save(commit=False)
+        if form.has_changed():
+            self.object = form.save(commit=False)
         
-        # 2. Inject your automatic data changes
-        self.object.date_modified = timezone.now()
-        self.object.user_modified = self.request.user # Example: Save who edited it, will be stored when we use the buffer
+            # 2. Inject your automatic data changes
+            self.object.last_modified = timezone.now() 
         
-        # 3. Save the object to the database
-        self.object.save()
+            # 3. Save the object to the database
+            self.object.save()
         
         # 4. Trigger standard redirection
         return super().form_valid(form)

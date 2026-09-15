@@ -1,7 +1,7 @@
 # IMPORTS
 from django.views.generic import ListView, DetailView
 from django.contrib.messages.views import SuccessMessageMixin # used for messages in class-based views
-from .services import translate_word # from services.py file for the translate function
+from .services import translate_word, letter_counter # from services.py file for the translate and letter_ count function
 from .models import DictionaryEntry
 from django.contrib.auth.mixins import LoginRequiredMixin
 import re
@@ -78,6 +78,7 @@ class DictionaryUpdateView(SuccessMessageMixin,LoginRequiredMixin, UpdateView): 
         # 4. Trigger standard redirection
         return super().form_valid(form)
 
+
 # delete view class from the django documentation
 class DictionaryDeleteView(SuccessMessageMixin,LoginRequiredMixin,DeleteView):
     model = DictionaryEntry
@@ -104,17 +105,22 @@ def extract_unique_words(text):
     return unique_words
  
  
-# extra=0 here is just a default — the real count is set per-request below,
-# since it depends on how many *new* words this particular story contains.
-DictionaryEntryFormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=3)
- 
- 
 @login_required # make it so a user needs to log in 
 def add_content_view(request):
-    # "stage" tracks which of the two steps we're on, carried as a hidden
-    # input in the HTML form so the same view function can handle both.
+    """
+    This view handles adding content to the website through a two-stage process
+    Stage 1 is the "submit text" stage and handles the content itself and the title. This is connected to the Content model
+    Stage 2 is connected to this dictionary and gives the user a table of the words in the content so they can add translations, etc
+
+    characters_required sets the amount of characters a user must submit to have a valid story
+    """
+    # create the formset
+    DictionaryEntryFormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=3)
+ 
     stage = request.POST.get("stage")
-    
+    characters_required = 5 # <----- this sets the amount of characters a user must enter when they write a story
+
+    # SUBMIT TEXT STAGE OF THE VIEW
     if request.method == "POST" and stage == "submit_text":
         # ---- STEP 1: user just submitted the raw story text ----
         content_title = request.POST.get("content_title", "")
@@ -122,12 +128,40 @@ def add_content_view(request):
         content_source = request.POST.get("content_source", "")
         content_level = request.POST.get("content_level", "")
 
-        # need to check if it exists but don't need to save now since i'm saving later. Also shouldn't save if something happens
-        # and the words aren't uploaded so that's good.
-        # like problem solving and I think I know enough now to not use AI that much anymore.
-        if Content.objects.filter(title = content_title).exists():
-            # if it exists we need to fuck something up and print an error
-            #print("AHHHHHHHH")
+        # going to count the character count of the fields
+        letter_count = letter_counter(content_body)
+        title_count = letter_counter(content_title)
+        source_count = letter_counter(content_source)
+
+        # make a count pass flag
+        count_flag = 0 # flag to see if we pass both count tests
+
+        # if the count is too low we should have them enter more words
+        if letter_count < characters_required:
+            messages.error(request, f"Error: Please write an entry of at least {characters_required} characters")
+    
+        # make sure that "title" isn't too short either
+        elif title_count < 3: # <----- i can change this value later
+            messages.error(request, f"Error: Please write a title of at least three characters")
+        elif source_count < 3:
+            messages.error(request, f"Error: Please write a source of at least three characters")
+        else:
+            count_flag = 1  # test passed with flying colors I LOVE FLAGS
+
+        # test the pass flag
+        if count_flag == 0:
+            # go home!
+            return render(request, "dictionary/add_content_text.html", { # refresh the view to enter the text again
+                "content_title": content_title, 
+                "content_body": content_body,
+                "content_source": content_source,
+                "content_level": content_level,
+                })
+
+    
+        # need to test that the slug doesn't exist either if we slugify the title plus we shouldn't allow an empty content_level value
+        test_slug = slugify(content_title)
+        if Content.objects.filter(title = content_title).exists() or Content.objects.filter(slug=test_slug).exists() or content_level == "":
             # out put the message
             messages.error(request, f"Error '{content_title}' Title already exists.")
 
@@ -168,7 +202,8 @@ def add_content_view(request):
                 "content_source": content_source,
                 "content_level": content_level,
             })
- 
+
+    # SUBMIT WORDS TO THE DICTIONARY STAGE
     elif request.method == "POST" and stage == "save_content":
         # ---- STEP 2: user reviewed/edited the word table and hit final Save ----
         content_title = request.POST.get("content_title", "")
@@ -250,23 +285,21 @@ def add_content_view(request):
     else: 
         formset = DictionaryEntryForm() # might need to change this since it's not a formset 
 
- 
+
     # ---- Plain GET request: show the initial "paste your story" form ----
     return render(request, "dictionary/add_content_text.html",{'formset':formset})
 
 
 # function from translating with my services function
-def translate_suggestion(request, word):
+def translate_suggestion(response, word):
     """
     Called by the per-row Translate button via fetch(). Returns a raw
     suggestion from the translation API WITHOUT saving anything to the
     database — the user can still edit the value before the final save.
-    Note: only 'definition' is populated this way; the translate API has
-    no concept of part of speech or example sentences.
     """
 
     # use my function to get a bunch of stuff from the API
-    translated_text = translate_word(word)
+    translated_text = translate_word(word) # this comes from the services.py file
 
     # what the api will output:
     # new_entry = {

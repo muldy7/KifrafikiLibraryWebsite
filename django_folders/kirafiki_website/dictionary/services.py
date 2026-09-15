@@ -34,6 +34,18 @@ import re
 
 # function to import into my file
 # function to just get a definition since some can be annoying if they are infinitives or plurals but will need more testing
+def letter_counter(string):
+    """
+    This is a simple function to count the letters in a string
+    This will exclude any punctuation 
+    """
+    letter_count = 0
+    for char in string:
+        if char.isalpha():
+            letter_count += 1
+
+    return letter_count
+
 
 def simple_lookup(word):
     url = f"https://freedictionaryapi.com/api/v1/entries/sw/{word}?translations=true" # url used for kiswahili
@@ -57,7 +69,7 @@ def simple_lookup(word):
     # main meaning grabbed from the url requests
     try:
         data = response.json()
-        print(data)
+        #print(data)
         if not data['entries']: # if nothing is found in entires we'll continue and output none
             print(f"No definitions found for the word '{data['word']}'.")
             definition = "N/A"

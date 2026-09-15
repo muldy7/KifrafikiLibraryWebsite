@@ -5,10 +5,8 @@ from django.utils import timezone
 from django.urls import reverse
 import datetime
 from django.contrib.auth import get_user_model
-
-# UNUSED IMPORTS
-#from accounts.models import CustomUser
-#import time
+from site_content.models import Content
+from .services import lookup_word # for basic testing 
 
 # functions to be used in tests
 def create_basic_entry(test_entry):
@@ -57,10 +55,37 @@ def create_content_form_data(title, content):
         "content_body": content,
         "content_level": "B",
         "content_source": "no source found",
-        "stage":"save_content" # have to include the stage since there is no redirect
+        "stage":"submit_text" # have to include the stage since there is no redirect
     }
 
     return form_data
+
+def formset_post_data(formset, rows, **extra):
+    """
+    This function creates a post data for the second stage of the content tool since it is required that 
+    we retain the data from the first stage
+    We need to do this function to deal with parts of the formset that are required for submission
+    These are normally hidden to the user but required for testing
+    """
+    mf = formset.management_form
+    data = {
+        "form-TOTAL_FORMS": str(max(len(rows), mf.initial["TOTAL_FORMS"])),
+        "form-INITIAL_FORMS": str(mf.initial["INITIAL_FORMS"]),
+        "form-MIN_NUM_FORMS": "0",
+        "form-MAX_NUM_FORMS": "1000",
+    }
+    for i, row in enumerate(rows):
+        for name, value in row.items():
+            data[f"form-{i}-{name}"] = value
+        data.setdefault(f"form-{i}-id", "")
+    data.update(extra)
+    return data
+
+def create_content(title,content):
+    """
+    This function acts as a way to create a basic entry into the Content model
+    """
+    return Content.objects.create(title= title, content = content, pub_date = timezone.now(), last_modified = timezone.now())
 
 def create_user(self,username):
     """
@@ -393,6 +418,45 @@ class DictionaryEntryUserTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404) # need to use status code oops
 
+    # TEST NUMBER 23 
+    def test_adding_bad_values(self):
+        """
+        This test checks to make sure that if an entry will not be excepted if there are bad values in either "english" or the "swahili entry" fields
+        Bad values include: spaces, punctuatin, single letter entries, or nothing at all
+
+        """
+
+        # test looking at the website page
+        test_entry = create_past_entry("test") # make a entry that's to compare against
+
+        # get url for the update entry page
+        url = reverse("dictionary:update-entry", kwargs={"slug": test_entry.slug}) # including reverse in the url
+
+        # test single punctuation
+        form_data = create_basic_form_data("+","+") # have the form be denied since it matches the first word
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) # make sure it was the change was denied
+
+        # test single letter
+        form_data = create_basic_form_data("a","a") # have the form be denied since it matches the first word
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) # make sure it was the change was denied
+
+        # test spaces 
+        form_data = create_basic_form_data("   ","    ") # have the form be denied since it matches the first word
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) # make sure it was the change was denied
+
+        # test empty string
+        form_data = create_basic_form_data("","") # have the form be denied since it matches the first word
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) # make sure it was the change was denied
+
+        # test lots of punctuation
+        form_data = create_basic_form_data("+//...--","()>><>';;;") # have the form be denied since it matches the first word
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) # make sure it was the change was denied
+
 
 # NO USER TEST CLASS
 class DictionaryEntryAnonymousUserTests(TestCase):
@@ -455,6 +519,7 @@ class DictionaryEntryAnonymousUserTests(TestCase):
 
 
 # CONTENT ENTRY TOOL TEST CLASS
+# python manage.py test dictionary.tests.ContentEntryToolTests
 class ContentEntryToolTests(TestCase):
     """
     Test class for tests involving the content entry tool
@@ -497,7 +562,7 @@ class ContentEntryToolTests(TestCase):
         Test if the content tool redirects to the add words page
         """
         url = reverse("dictionary:add-content")
-        data_entry = create_content_form_data("test","test")
+        data_entry = create_content_form_data("test","test words") # <---- needs to be at least 5 words
 
         # submit the form with the data entry
         response = self.client.post(url, data_entry) # <---- have to remeber the stage for the form to submit correctly that's nifty smart
@@ -505,46 +570,222 @@ class ContentEntryToolTests(TestCase):
         self.assertContains(response, "Review Words")
 
         # make sure the new content wasn't yet added to the database
-        with self.assertRaises(DictionaryEntry.DoesNotExist):
-            DictionaryEntry.objects.get(swahili_entry='test')
+        with self.assertRaises(Content.DoesNotExist):
+            Content.objects.get(title='test')
+
+    def test_content_tool_uppercase(self):
+        """
+        Test if the content tool allows titles that are the same but with uppercase
+        The content tool should refuse the user from submitting the title 
+        """
+        create_content("test", "test words") # add a test entry to the Content data base
+
+        url = reverse("dictionary:add-content")
+
+        data_entry = create_content_form_data("TEST","test words") # try the same title but uppercase
+        
+        # submit the form with the data entry
+        response = self.client.post(url, data_entry)
+        self.assertEqual(response.status_code, 200)  # <---- will post a 200 if the post works correctly
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if the title is the same
+        
+    def test_content_tool_no_content(self):
+        """
+        Test if the content tool allows a user to submit with nothing written
+        """
+
+        url = reverse("dictionary:add-content")
+
+        data_entry = {
+        "content_title": "test", # <--- submitting with title but no content 
+        "content_level": "B",
+        "stage":"submit_text" # have to include the stage since there is no redirect
+        }
 
         
+        # submit the form with the data entry
+        response = self.client.post(url, data_entry)
+        self.assertEqual(response.status_code, 200)  # <---- will post a 200 if the post works correctly
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if the title is the same
 
-        # testing this will be tricky because on the first stage we need to make sure the slug doesn't match, but I guess that won't be too hard
-        # to test without saving I think I already figured that out didn't i
-        # this testing is definitely teaching me how everything works damn those developers
-        # it may be tricking while testing this because there is no redirect but we will see what happens
 
-        # test to see if we're on the new page now
-        #response = self.client.get(url)
+    def test_content_tool_no_level_choice(self):
+        """
+        Test if the content tool allows a user to submit with no choice for "Level"
+        """
+
+        url = reverse("dictionary:add-content")
+
+        data_entry = {
+        "content_title": "test", # 
+        "content_body": "test words",
+        "stage":"submit_text" # have to include the stage since there is no redirect
+        }
+
+        # submit the form with the data entry
+        response = self.client.post(url, data_entry)
+        self.assertEqual(response.status_code, 200)  # <---- will post a 200 if the post works correctly
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection
+
+    def test_content_tool_bad_values(self):
+        """
+        Test if the content tool allows a user to submit with bad values in the title or content body
+        This include submissions of spaces, punctuation, or small entries
+        """
+        # create the url
+        url = reverse("dictionary:add-content")
+
+        # test submititng just spaces
+        form_data = create_content_form_data("  ","  ")
+        response = self.client.post(url, form_data)
+        self.assertContains(response, "required") # beginning of the error message
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection
+
+        # test submititng just empty strings
+        form_data = create_content_form_data("","")
+        response = self.client.post(url, form_data)
+        self.assertContains(response, "Please write") # beginning of the error message
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection
+
+        # test submititng one letter
+        form_data = create_content_form_data("a","b")
+        response = self.client.post(url, form_data)
+        self.assertContains(response, "Please write") # beginning of the error message
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection
+
+        # test submititng just spaces
+        form_data = create_content_form_data("  ","  ")
+        response = self.client.post(url, form_data)
+        self.assertContains(response, "Please write") # beginning of the error message
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection
+
+        # test submititng punctuation
+        form_data = create_content_form_data("+_:><","./?'''")
+        response = self.client.post(url, form_data)
+        self.assertContains(response, "Please write") # beginning of the error message
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection
+
+        # test submititng single punctuation
+        form_data = create_content_form_data("?","%")
+        response = self.client.post(url, form_data)
+        self.assertContains(response, "Please write") # beginning of the error message
+        self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if there is no choice selection      
+
+    # TEST NUMBER 25
+    def test_translation_function(self):
+        """
+        This test performs a basic test of the translation tool function sinc ethe function of the button uses
+        website based JavaScript and it can't be tested with python
+        """
+        #translated_word = lookup_word("sitaki") # using the translation function
+        #self.assertIn("No examples found",translated_word)
+        # I'll really have to understad how this button works if i want the edit button to work
+
+    def test_two_stage_save(self):
+        """
+        This test performs a basic test of the add content tool and ensures that the new content is seen in the database
         
+        """
+        url = reverse("dictionary:add-content")
+        # ---- stage 1 ----
+        response_1 = self.client.post(url, {
+            "stage": "submit_text",
+            "content_title": "test",
+            "content_body": "sitaki chakula",
+            "content_source": "my head",
+            "content_level": "B",      # must not be empty
+        })
+        self.assertEqual(response_1.status_code, 200)
+        self.assertTemplateUsed(response_1, "dictionary/add_content_words.html") # cool I can test the template used with django
+        self.assertFalse(Content.objects.filter(title="test").exists()) # the entry should not yet exist 
 
+        formset = response_1.context["formset"] # save the formset from round one
+
+        # ---- stage 2 ----
+        # create a full row of data for the form 
+        r1 = create_basic_form_data("sitaki","I don't want") # row 1
+        r2 = create_basic_form_data("chakula","food") # row 2
+         
+        data = formset_post_data(
+            formset,
+            rows=[
+                r1,
+                r2,
+            ],
+            stage="save_content",   # include the same data from the first round
+            content_title="test",
+            content_body="sitaki chakula",
+            content_source="my head",
+            content_level="B",
+        )
+        response_2 = self.client.post(url, data)
+        #self.assertContains(response_2, "blah balh ablha hahaha")
+        self.assertEqual(response_2.status_code, 302)
+        self.assertTrue(Content.objects.filter(title="test").exists())
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="sitaki").exists())
+
+    # TEST NUMBER 27
+    def test_two_stage_bad_values(self):
+        """
+        This test performs a test of the content entry tool with different bad values
         
-        # will be a 200 if the post worls correctly
-        # this is because its not a redirect but just changes the view which is good. 
-        # A user can't go directly to the add words page
+        """
+
+        url = reverse("dictionary:add-content")
+
+        # TEST #1 NO TITLE
+        # ---- stage 1 ----
+        response_1 = self.client.post(url, {
+            "stage": "submit_text",
+            "content_title": "",
+            "content_body": "sitaki chakula",
+            "content_source": "my head",
+            "content_level": "B",      # must not be empty
+        })
+
+        self.assertEqual(response_1.status_code, 200) # <--- will always be a 200
+        self.assertContains(response_1, "Please write a title of at least three characters")
+
+        # with self.assertRaises(AssertionError):
+        #     formset = response_1.context["formset"] # save the formset from round one
+
+        # TEST TWO BAD VALUES
+        # ---- stage 1 ----
+        response_1 = self.client.post(url, {
+            "stage": "submit_text",
+            "content_title": "test",
+            "content_body": "sitaki chakula",
+            "content_source": "my head",
+            "content_level": "B",      # must not be empty
+        })
+
+        # ---- stage 2 ----
+        formset = response_1.context["formset"] # save the formset from round one
+
+        # create a full row of data for the form 
+        r1 = create_basic_form_data(" ","+++++") # row 1
+        r2 = create_basic_form_data("c","   ") # row 2
+         
+        data = formset_post_data(
+            formset,
+            rows=[
+                r1,
+                r2,
+            ],
+            stage="save_content",   # include the same data from the first round
+            content_title="test",
+            content_body="sitaki chakula",
+            content_source="my head",
+            content_level="B",
+        )
+        response_2 = self.client.post(url, data)
+        #self.assertContains(response_2, "blah balh ablha hahaha")
+        self.assertEqual(response_2.status_code, 200) # should not redirect
+        self.assertFalse(Content.objects.filter(title="test").exists())
+        self.assertFalse(DictionaryEntry.objects.filter(swahili_entry="sitaki").exists())
 
 
-# add stuff for the delete views as well. 
-
-# can add tests for the content entry form tooooooo ooff I'll make that as a new class though
-
-# I'll add a Class here for the content submission tool. I can use the setUp() to make sure a user is automatically logged in
-    # 1. I'll have to add one test above to make sure it can't be accessed without a user login (DONE)
-    # 2. can test some stuff with the translation tool here too
-    # 3. man this is a lot of work but so freaking awesome it's cool to see everything working well and know I have cracks filled
-    # 4. lezyne really made me value doing a bunch of testing and i'm finding stuff
-    # 5. punctuation can stay in the title but not the string so we'll have to take a look at just the slug and test that, if the strong is 
-    #    different we'll make them look at a seperate title
-    #    using login in the setUp but making in the user in create the test data seemed to serioulsy speed things up!
-    #    lets try and do the basic test entry in test data next time but don't need to do anything now
-    #    when a user presses the "add content tool" it should ask them to login, I should probably just do that to the update content button that's easier hmm
-
-        # steps
-        # add log in page
-        # change forms I guess
-        # okay I added a log in page and once I add "user required" it may mess some things up
-        # the update and content user tool should be user only, so let's go make the changes to that
+## ADD TEST AS I WRITE CODE, KEEP IT NICE AND EASY!!
 
 
     
