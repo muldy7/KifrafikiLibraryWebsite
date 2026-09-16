@@ -18,7 +18,8 @@
     <!-- see if we got a link or just text from the source (target = "_blank" means it will open in new tab)-->
     <p>Source: {%if "https" in object.source %} <a href={{object.source}} target="_blank">Source Link</a> {% else %} {{object.source}} {% endif %}</p>
   </footer>
-<a href="{% url 'site_content:update-content' slug=object.slug %}" class="button">Edit Content</a> | <a href="{% url 'site_content:delete-content' slug=object.slug %}" class="button">Delete Current Content</a> 
+<a href="{% url 'site_content:update-content' slug=object.slug %}" class="button">Edit Content</a> | <a href="{% url 'site_content:delete-content' slug=object.slug %}" class="button">Delete Current Content</a> | <a href="{% url 'site_content:reader-view' slug=object.slug %}" class="button">Open Reader View</a> 
+  <p></p>
   <p></p>
 <p><a href="{% url 'site_content:content-list' %}">&larr; Back to all stories</a></p>
 {% endblock %}

@@ -6,6 +6,9 @@ from .models import Content
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import ContentUpdateForm
+from django.shortcuts import render
+from django.http import JsonResponse
+from dictionary.models import DictionaryEntry
  
  
 class ContentListView(ListView):
@@ -60,5 +63,78 @@ class ContentDeleteView(SuccessMessageMixin,DeleteView):
     model = Content
     success_url = reverse_lazy("site_content:content-list") # can't forget the app name
     success_message = "Entry deleted successfully" # this will get shown at the top of the list view
-   
 
+
+# view for making a reader view where we can click on the words
+# going to keep this view seperate for now and just have it connect to the list view
+def reader_view(request,slug): # <---- can give the view the slug and then it can look up the content!
+    """
+    This view uses a new template and javascript so each word in the text is clickable
+    The clickable text then opens the side bar with the definiton of the word
+    Reader view is a temporary name that will eventually replace the detail view
+    """
+    # get the object from the db
+    content = Content.objects.get(slug=slug)
+
+    # create the basic words by splitting at the spaces, this should keep punctuations
+    # going to split the sentences into paragraphs since 
+    #words = content.content.split()
+    content_body = content.content # a little confusing since the name is the same haha
+    paragraphs = content_body.split('\n\n')
+    
+    structured_content = []
+    for para in paragraphs:
+        # split each paragraph into lines by single newlines
+        lines = para.split('\n')
+        para_lines = []
+        for line in lines:
+            # split lines into individual words
+            words = line.split()
+            para_lines.append(words)
+        structured_content.append(para_lines)
+
+    # create context for the view
+    context = {
+        "structured_content": structured_content,
+        "author": content.author,
+        "pub_date": content.pub_date,
+        "title": content.title
+               } # this is the context given to the website
+
+    # i can give the view whatever I need in "context"
+    return render(request, "site_content/reader_view.html", context)
+
+
+def fetch_database_entry(response,word):
+    """
+    Called by the reader view via fetch, this function should grab the entries from the database and 
+    give them to the side bar 
+    """
+    # convert all to lower case letters since that's how its stored in the dictionary
+    word = word.lower()
+
+    # get the word entry from the database
+    try:
+        # Try to find the entry in the database
+        dict_entry = DictionaryEntry.objects.get(swahili_entry=word) 
+        
+        # If found, return the full entry data
+        return JsonResponse({
+            "success": True,
+            "swahili_entry": dict_entry.swahili_entry,
+            "english": dict_entry.english,
+            "part_of_speech": dict_entry.part_of_speech,
+            "construction": dict_entry.construction,
+            "sentence": dict_entry.sentence,
+            "translation_source": dict_entry.translation_source
+        })
+        
+    except DictionaryEntry.DoesNotExist:
+        # If not found, return a clean error message and a 404 status code
+        return JsonResponse(
+            {
+                "success": False,
+                "error": f"The word '{word}' was not found in the dictionary."
+            }, 
+            status=404
+        )

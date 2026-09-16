@@ -95,11 +95,14 @@ def extract_unique_words(text):
     first appears. 
     """
     #words = re.findall(r"[^\W\d_]+", text.lower()) # using regex to get rid of stuff in here 
-    words = re.findall(r"[^\W\d_]+(?:['’][^\W\d_]+)*", text.lower()) # going to use this so it doesn't get rid of ng'ombe \W means not a word character
+    allowed_character = '$' # this is the punctuation to combine compound phrases
+    words = re.findall(rf"(?:[^\W\d_]|{re.escape(allowed_character)})+(?:['’](?:[^\W\d_]|{re.escape(allowed_character)})+)*", text.lower()) # going to use this so it doesn't get rid of ng'ombe \W means not a word character
     seen = set()
     unique_words = [] # need a list of words that are new to the database
     for word in words:
-        if word not in seen:
+        if allowed_character in word:
+            word = word.replace(allowed_character," ") # look for dollar sign and replace with a space since its a compound phrase
+        if word not in seen:    # continue to see if we know the word
             seen.add(word)
             unique_words.append(word)
     return unique_words
@@ -115,10 +118,10 @@ def add_content_view(request):
     characters_required sets the amount of characters a user must submit to have a valid story
     """
     # create the formset
-    DictionaryEntryFormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=3)
+    DictionaryEntryFormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=3,  can_delete=True)
  
     stage = request.POST.get("stage")
-    characters_required = 5 # <----- this sets the amount of characters a user must enter when they write a story
+    characters_required = 5 # <----- this sets the amount of characters a user must enter when they write a story, maybe this can be a global variable somehow
 
     # SUBMIT TEXT STAGE OF THE VIEW
     if request.method == "POST" and stage == "submit_text":
@@ -216,15 +219,16 @@ def add_content_view(request):
         # Bind submitted data to the main FormSet template
         formset = DictionaryEntryFormSet(request.POST, queryset=DictionaryEntry.objects.all())
  
-        if formset.is_valid():
-            # Step A: Loop through the individual forms to attach meta user info
-            for form in formset.forms:
-                # Check if the form actually has data (skips empty extra forms)
-                if form.has_changed():
+        for form in formset.forms:
+        # Step A: Loop through the individual forms to attach meta user info
+            # Check if the form actually has data (skips empty extra forms)
+            if form.has_changed():
+                if form.is_valid():
                     # Extract the database instance object without saving it yet
                     entry = form.save(commit=False)
 
-                    # Check if this specific entry is brand new (no primary key yet)
+                    # this is so we can combine compound words or phrases for our dictionary. 
+                     # Check if this specific entry is brand new (no primary key yet)
                     if entry.pk is None:
                         entry.user_added = request.user # since I have custom user this may fail later
                         entry.date_added = timezone.now()
@@ -235,7 +239,17 @@ def add_content_view(request):
 
                     # Save this individual record to the database safely
                     entry.save()
+                else:
+                    # see whatever swahili word there is an error for (can add line number later)
+                    swahili_entry = form.add_prefix('swahili_entry')
+                    swahili_word = request.POST.get(swahili_entry, "Unknown Word")
+                    for field, errors in form.errors.items(): # this has to be "formset" and not "forms"
+                        for error in errors:
+                        # going to get error and the field name for the error
+                            messages.error(request, f"Error '{swahili_word}' ({field.title()}): {error}")
 
+        # only save the content if the entire formset is valid
+        if formset.is_valid():
             # Step B: Handle any items flagged for deletion safely outside the loop
             if formset.can_delete:
                 formset.save(commit=False) 
@@ -260,35 +274,26 @@ def add_content_view(request):
             #time.sleep(3) # maybe it's happening instantly or i just need to have a message pane on my other tab.
             # the message will never be posted so I'll have to fix that
             return redirect("site_content:content-list")  # adjust to your actual URL name
-        # need an error if first step isn't valid
+            # need an error if first step isn't valid
         else:
-            # loop through errors if any pop-up on the second form page
-            for form in formset: # have to loop through each form in the formset first 
-                if form.errors:
-                    # see whatever swahili word there is an error for (can add line number later)
-                    swahili_entry = form.add_prefix('swahili_entry')
-                    swahili_word = request.POST.get(swahili_entry, "Unknown Word")
-                    for field, errors in form.errors.items(): # this has to be "formset" and not "forms"
-                        for error in errors:
-                        # going to get error and the field name for the error
-                            messages.error(request, f"Error '{swahili_word}' ({field.title()}): {error}")
         # If the formset had errors, re-render step 2 with error messaging
-        return render(request, "dictionary/add_content_words.html", {
-            "formset": formset,
-            "content_title": content_title,
-            "content_body": content_body,
-            "content_source": content_source,
-            "content_level": content_level, # Fixed a typo from 'countent_level'
+            return render(request, "dictionary/add_content_words.html", {
+                "formset": formset,
+                "content_title": content_title,
+                "content_body": content_body,
+                "content_source": content_source,
+                "content_level": content_level, 
+            })
+    
+    else:
+        # If it's a POST request but stage is missing/blank, it's our edit redirect button!
+        # this is because we redirected back to stage 1 from stage 2
+        return render(request, "dictionary/add_content_text.html", {
+            "content_title": request.POST.get("content_title", ""),
+            "content_body": request.POST.get("content_body", ""),
+            "content_source": request.POST.get("content_source", "UserAdded"),
+            "content_level": request.POST.get("content_level", ""),
         })
-
-    # if the form doesn't work do this last
-    else: 
-        formset = DictionaryEntryForm() # might need to change this since it's not a formset 
-
-
-    # ---- Plain GET request: show the initial "paste your story" form ----
-    return render(request, "dictionary/add_content_text.html",{'formset':formset})
-
 
 # function from translating with my services function
 def translate_suggestion(response, word):
@@ -301,16 +306,6 @@ def translate_suggestion(response, word):
     # use my function to get a bunch of stuff from the API
     translated_text = translate_word(word) # this comes from the services.py file
 
-    # what the api will output:
-    # new_entry = {
-    #         "swahili_entry": clean_text,
-    #         "english": definition,
-    #         "part_of_speech": part_of_speech,
-    #         'construction': construction,
-    #         #"date_added": timezone.now(), # i could also do this on the views side but might as well get it done now, not going to work since this isn't in django
-    #         'sentence': example,
-    #         'translation_source': source
-    #     }
     # need to add stuff here so more stuff can come from the translate tool
     return JsonResponse(
         {"swahili_entry": translated_text["swahili_entry"],
@@ -320,7 +315,6 @@ def translate_suggestion(response, word):
          "sentence": translated_text["sentence"],
          "translation_source": translated_text["translation_source"]
          })
-
 
 # test code 
 if __name__ == "__main__":

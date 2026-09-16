@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- The sidebar element -->
+<div id="mySidebar" class="sidebar">
+    <a href="javascript:void(0)" id="closeBtn" class="close-btn">&times;</a>
+    
+    <!-- dynamically show the word on the side bar -->
+    <div class="sidebar-content">
+        <h2 id="sidebarWord">Select a word</h2>
+        <p>You clicked this word from your paragraph.</p>
+    
+        <p class="english"><strong>English:</strong> <span id="sidebarEnglish">Select a word</span></p>
+        <p class="pos"><strong>Part of speech:</strong> <span id="sidebarPartOfSpeech">Select a word</span></p>
+        <section>
+            <h2>Definition (Kiswahili)</h2>
+            <p id="sidebarDefinition">Select a word</p>
+        </section>
+
+        <section>
+            <h2>Example Sentence</h2>
+            <p id="sidebarSentence">Select a word</p>
+        </section>
+
+        <section>
+            <h2>Construction</h2>
+            <p id="sidebarConstruction">Select a word</p>
+        </section>
+    </div>
+</div>
+
+<article>
+    <h1>{{ title }}</h1>
+    <p>By {{ author }} &mdash; {{ pub_date }}</p>
+    <!-- when I add css I'll want this to be a word container so it's okay on mobile -->
+    <!-- go paragraph by paragraph and word by word so it looks nice -->
+    {% for paragraph in structured_content %}
+        <p>
+            {% for line in paragraph %}
+                {% for word in line %}
+                    <button class="toggle-btn" data-word="{{ word }}">{{ word }}</button>
+                {% endfor %}
+                
+                {# Replicates the single <br> line break #}
+                {% if not forloop.last %}<br>{% endif %}
+            {% endfor %}
+        </p>
+    {% endfor %}
+   
+    </p>
+</article>
+
+
+<!-- java script code for the button --> 
+<!-- java is the functional elements of the webiste while html is just the layout -->
+<script>
+const toggleButtons = document.querySelectorAll(".toggle-btn"); /* get all elements that are in the same class */
+const sidebar = document.getElementById("mySidebar");
+const mainContent = document.getElementById("mainContent");
+const closeBtn = document.getElementById("closeBtn");
+
+// grab the word from each button
+const sidebarWord = document.getElementById("sidebarWord");
+
+// get the values for the sidebar
+const sidebarEnglish = document.getElementById("sidebarEnglish");
+const sidebarPartOfSpeech = document.getElementById("sidebarPartOfSpeech"); 
+const sidebarConstruction = document.getElementById("sidebarConstruction");
+const sidebarSentence = document.getElementById("sidebarSentence");
+const sidebarDefinition = document.getElementById("sidebarDefinition")
+
+// Open sidebar
+// have to loop through every button
+toggleButtons.forEach(function(button) {
+    //  has to be an async function since we're waiting for the database call
+    button.addEventListener("click", async function() {
+        // get the word from the button and replace any punctuation
+        // this whill be a place where it may get messed up with other languages. 
+        const clickedWord = this.getAttribute("data-word").replace(/[^a-zA-Z0-9\s]/g, "");
+        
+        // call the function to get the stuff from the database
+        // have to use try or it won't work
+        try {
+            const response = await fetch(`/site_content/fetch-database-entry/${encodeURIComponent(clickedWord)}/`);
+            if (!response.ok) throw new Error("Translation fetch failed");
+            
+            // get the response data from the function 
+            const data = await response.json()
+
+            // add all the elements
+            // add || "No data" for if nothing is found 
+            sidebarConstruction.textContent = data.construction || "No data"
+            sidebarEnglish.textContent = data.english || "No data"
+            sidebarPartOfSpeech.textContent = data.part_of_speech || "No data"
+            sidebarSentence.textContent = data.sentence || "No data"
+            sidebarDefinition.textContent = data.definition || "No data"
+        
+            // give the clicked word the the side panel
+            sidebarWord.textContent = clickedWord;
+
+            // open the side panel
+            sidebar.style.width = "400px";
+            // only do this if there's not an error
+            if (mainContent) {
+                mainContent.style.marginRight = "400px"; 
+            }
+
+        } catch (error) {
+            console.error("Error fetching word details:", error);
+            // Optional: Open the sidebar anyway to show an error message
+            sidebarWord.textContent = clickedWord;
+            sidebarEnglish.textContent = "Error loading data.";
+            sidebar.style.width = "400px";
+        }
+    });    
+});
+
+// Close sidebar using the 'X' button
+closeBtn.addEventListener("click", function() {
+    sidebar.style.width = "0";
+    mainContent.style.marginRight = "0";
+});
+
+</script>
+
+<!-- the custom css style for the side panel, I may have to change this later when adding bootstrap -->
+<!-- I can load this as a seperate file too so this doesn;t get too long, and make sure it loads after the base style -->
+<style>
+/* Style the sidebar */
+.sidebar {
+    height: 100%;
+    width: 0; /* Hidden by default */
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0; /*this aligns the side bar to the right */
+    background-color: #111;
+    overflow-x: hidden;
+    transition: 0.3s; /* Smooth opening animation */
+    padding-top: 60px;
+}
+
+/* Sidebar links */
+.sidebar a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+}
+
+.sidebar a:hover {
+    color: #f1f1f1;
+}
+
+/* Close button inside the sidebar */
+.sidebar .close-btn {
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    margin-left: 50px;
+}
+
+/* Push main content when sidebar is open (optional) */
+.main {
+    transition: margin-left 0.3s;
+    padding: 16px;
+}
+
+.toggle-btn {
+    background: none;       /* Removes the default gray background */
+    border: none;           /* Removes the default button border border */
+    padding: 0;             /* Removes the inner padding so it sits tight with other words */
+    margin: 0;              /* Removes default outer spacing */
+    font: inherit;          /* Inherits the exact size, weight, and font-family of the paragraph */
+    color: inherit;         /* Inherits the text color of the paragraph */
+    cursor: pointer;        /* Changes the mouse cursor to a hand pointer to show it's clickable */
+    outline: none;          /* Removes the default box outline when clicked */
+    display: inline;        /* Keeps the buttons inline so they flow like normal text words */
+}
+
+/* Optional: Add a subtle feedback effect when hovering over the word */
+.toggle-btn:hover {
+    color: #007bff;         /* Changes color slightly on hover (e.g., Bootstrap blue) */
+    text-decoration: underline; /* Adds an underline to show it behaves like a link */
+}
+
+/* Target the content container inside the sidebar */
+.sidebar-content {
+    padding: 20px;       /* Adds breathing room around the text */
+    color: #ffffff;      /* Forces all text inside this container to be white */
+    font-family: Arial, sans-serif; /* Optional: sets a clean font */
+}
+
+/* Specifically style the dynamically loaded word */
+/* the hash means dynamic I guess */
+#sidebarWord {
+    color: #ffffff;      /* Ensures the word itself is bright white */
+    font-size: 28px;     /* Makes the clicked word stand out nicely */
+    margin-bottom: 10px; /* Adds space beneath the word */
+    border-bottom: 1px solid #444; /* Optional: adds a subtle underline separator */
+    padding-bottom: 10px;
+}
+
+/* Ensure any secondary paragraph descriptions are readable gray */
+.sidebar-content p {
+    color: #b3b3b3;      
+    font-size: 16px;
+    line-height: 1.5;
+}
+</style>
+
+{% endblock %}

@@ -15,5 +15,5 @@ urlpatterns = [
     path("<slug:slug>/", views.DictionaryDetailView.as_view(), name="dictionary-detail"),
     path("<slug:slug>/update-entry/", views.DictionaryUpdateView.as_view(),name="update-entry"),
     path("<slug:slug>/delete-entry/", views.DictionaryDeleteView.as_view(),name="delete-entry"),
-    
+   
 ]

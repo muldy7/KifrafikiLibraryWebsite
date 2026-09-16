@@ -5,7 +5,7 @@ from django.urls import reverse
 import datetime
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
-
+from dictionary.tests import create_basic_entry # this is used for testing reader view
 # basic functions to use for testing
 def create_content(title):
     """
@@ -364,3 +364,56 @@ class DictionaryEntryAnonymousUserTests(TestCase):
 
         # user will be automatically redirected
         self.assertEqual(response.status_code, 302) # <--- 302 for a redirect
+
+class ReaderViewTests(TestCase):
+    """
+    This class is for testing the reader view which will be a bit difficult to test since it is not as 
+    easy to test the javacript part of the code
+    Reader view also requires that content is added through the content tool so each word has a definition
+    """
+    def test_basic_view(self):
+        """
+        The reader view should be accessible once there an object is in the data base
+        """
+        test_object = create_content("test")
+        url = reverse("site_content:reader-view", kwargs={"slug": test_object.slug})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "test")
+
+    def test_fetch_database(self):
+        """
+        This tests makes sure the fetch call works if there is an entry in the dictionary db
+        """
+        test_entry = create_basic_entry("nitaenda")
+
+        url = reverse("site_content:fetch-database-entry", kwargs={"word": test_entry.swahili_entry})
+        
+        # 2. Make a GET request to that URL using the built-in test client
+        response = self.client.get(url)
+        
+        # 3. Assertions to verify the behavior
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["content-type"], "application/json")
+        
+        # 4. Check the JSON payload data
+        json_data = response.json()
+        self.assertEqual(json_data["english"], "default") # <-- basic value created by the create_entry function
+
+    def test_fetch_blank_database(self):
+            """
+            This tests makes sure the fetch call returns an error if nothing is found in the database
+            """
+    
+            url = reverse("site_content:fetch-database-entry", kwargs={"word": "test"})
+            
+            # 2. Make a GET request to that URL using the built-in test client
+            response = self.client.get(url)
+            
+            # 3. Assertions to verify the behavior
+            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response["content-type"], "application/json")
+            
+            # 4. Check the JSON payload data
+            json_data = response.json()
+            self.assertEqual(json_data["success"], False) # make sure the function call was unsuccessful
