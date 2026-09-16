@@ -24,6 +24,7 @@ urlpatterns = [
     path('site_content/', include('site_content.urls')),
     path('dictionary/', include('dictionary.urls')),
     path('', include('core.urls')),
+    path('my-vocabulary/',include('vocabulary.urls')),
     #path('add-content/', include('dictionary.urls')),
 ]
 

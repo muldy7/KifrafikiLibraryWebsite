@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'dictionary.apps.DictionaryConfig',
     'site_content.apps.SiteContentConfig',
-    'core.apps.CoreConfig'
+    'core.apps.CoreConfig',
+    'vocabulary.apps.VocabularyConfig'
 ]
 
 MIDDLEWARE = [

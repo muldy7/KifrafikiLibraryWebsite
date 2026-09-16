@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>My Vocabulary List</h1>
+
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <thead>
+        <tr>
+            <th>Word</th>
+            <th>Definition</th>
+            <th>Date Added</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in vocab_entries %}
+        <tr>
+            <!-- 1. Follow the relationship to the DictionaryEntry instance first -->
+            <td><strong>{{ entry.word.swahili_entry }}</strong></td> 
+            
+            <!-- 2. Access the English definition field out of DictionaryEntry -->
+            <td>{{ entry.word.english }}</td>
+            
+            <!-- 3. Pull the timestamp field straight off the ListAddition model row -->
+            <td>{{ entry.added_at|date:"M d, Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3" style="text-align: center; padding: 10px;">
+                Your vocabulary list is empty. Start adding words!
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

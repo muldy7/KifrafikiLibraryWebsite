@@ -28,7 +28,7 @@
     <!-- see if we got a link or just text from the source (target = "_blank" means it will open in new tab)-->
     <p>Source: {%if "https" in object.translation_source %} <a href={{object.translation_source}} target="_blank">en.wiktionary.org</a> {% else %} {{object.translation_source}} {% endif %}</p>
   </footer>
-  <a href="{% url 'dictionary:update-entry' slug=object.slug %}" class="button">Update Entry</a> | <a href="{% url 'dictionary:delete-entry' slug=object.slug %}" class="button">Delete Entry</a> 
+  <a href="{% url 'dictionary:update-entry' slug=object.slug %}" class="button">Update Entry</a> | <a href="{% url 'dictionary:delete-entry' slug=object.slug %}" class="button">Delete Entry</a> | <a href="{% url 'vocabulary:add-vocabulary-word' word=object.swahili_entry %}" class="button">Add to Vocabulary List</a> 
   <p></p>
   <!-- have to add dictionary: or it won't understand where it's supposed to get the template from -->
   <a href="{% url 'dictionary:dictionary-list' %}">&larr; Back to dictionary</a> 
