@@ -3,12 +3,22 @@
 {% block content %}
 
 <h1>My Vocabulary List</h1>
-
+<!-- button to clear the list -->
+<p>
+    <!-- only allow the user to clear the entries if they exist -->
+    {% if vocab_entries.exists %}
+    <!-- get the list from the entries and send the pk -->
+    <form action="{% url 'vocabulary:delete-list' pk=vocab_entries.first.vocab_list.pk %}" method="post" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn-delete" onclick="return confirm('Are you sure you want to clear your list?');"">Clear List</button>
+    </form>
+    {% endif %}
+</p>
 <table border="1" style="border-collapse: collapse; width: 100%;">
     <thead>
         <tr>
             <th>Word</th>
-            <th>Definition</th>
+            <th>Translation</th>
             <th>Date Added</th>
         </tr>
     </thead>
@@ -16,13 +26,24 @@
         {% for entry in vocab_entries %}
         <tr>
             <!-- 1. Follow the relationship to the DictionaryEntry instance first -->
-            <td><strong>{{ entry.word.swahili_entry }}</strong></td> 
+            <td><strong><a href="{% url 'dictionary:dictionary-detail' slug=entry.word.slug %}" class="button">{{ entry.word.swahili_entry }}</a></strong></td> 
             
             <!-- 2. Access the English definition field out of DictionaryEntry -->
             <td>{{ entry.word.english }}</td>
             
             <!-- 3. Pull the timestamp field straight off the ListAddition model row -->
             <td>{{ entry.added_at|date:"M d, Y" }}</td>
+
+            <!-- add a delete view button -->
+            <td>
+                <!-- post method means its skips the confirmation page, get brings us to the page -->
+                <form action="{% url 'vocabulary:delete-word' pk=entry.pk %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="button" onclick="return confirm('Are you sure you want to delete this word?');">
+                        Delete Word
+                    </button>
+                </form>
+            </td>
         </tr>
         {% empty %}
         <tr>

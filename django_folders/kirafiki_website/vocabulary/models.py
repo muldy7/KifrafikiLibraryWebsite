@@ -14,7 +14,7 @@ from django.utils import timezone
 # build good bones!
 
 class VocabularyList (models.Model):
-    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, unique=True, related_name="user_owner")
+    owner = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="user_owner") # we want one to one since it is unique
     vocab_words = models.ManyToManyField(DictionaryEntry, through='ListAddition',related_name='words')
 
     def save(self, *args, **kwargs):
@@ -28,12 +28,20 @@ class VocabularyList (models.Model):
 
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.owner}'s Vocab List"
+        
 # vocab words will be added with these other additions beyond what is coming from the Dictionary Entry
 class ListAddition(models.Model):
     vocab_list = models.ForeignKey(VocabularyList, on_delete=models.CASCADE)
     word = models.ForeignKey(DictionaryEntry, on_delete=models.CASCADE)
     # This field records when the connection was made
     added_at = models.DateTimeField(default=timezone.now) # this will not when the vocab word is added
+
+    # have a better name for the object
+    def __str__(self):
+        return f"{self.vocab_list}: {self.word}"
+    
 
 # at some point I can add the article this came from so it can link back to that
 

@@ -11,7 +11,7 @@ from .services import lookup_word # for basic testing
 # functions to be used in tests
 def create_basic_entry(test_entry):
     """
-    Create a entry with the basic fields field with defaults since it will be the same fields every time
+    Create a entry with the basic fields with defaults since it will be the same fields every time. 
     The fields can be manually changed with the create function if needed 
     """
     # make the date_added in the past for testing 

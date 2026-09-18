@@ -9,8 +9,9 @@
     <!-- dynamically show the word on the side bar -->
     <div class="sidebar-content">
         <h2 id="sidebarWord">Select a word</h2>
-        <p>You clicked this word from your paragraph.</p>
-    
+        
+        <a id="vocabBtn" href="#" class="vocab-btn" style="display: inline-block; text-align: center;">Add To Vocab List</a>
+
         <p class="english"><strong>English:</strong> <span id="sidebarEnglish">Select a word</span></p>
         <p class="pos"><strong>Part of speech:</strong> <span id="sidebarPartOfSpeech">Select a word</span></p>
         <section>
@@ -27,6 +28,7 @@
             <h2>Construction</h2>
             <p id="sidebarConstruction">Select a word</p>
         </section>
+
     </div>
 </div>
 
@@ -59,6 +61,7 @@ const toggleButtons = document.querySelectorAll(".toggle-btn"); /* get all eleme
 const sidebar = document.getElementById("mySidebar");
 const mainContent = document.getElementById("mainContent");
 const closeBtn = document.getElementById("closeBtn");
+const vocabBtn = document.getElementById("vocabBtn");
 
 // grab the word from each button
 const sidebarWord = document.getElementById("sidebarWord");
@@ -69,6 +72,7 @@ const sidebarPartOfSpeech = document.getElementById("sidebarPartOfSpeech");
 const sidebarConstruction = document.getElementById("sidebarConstruction");
 const sidebarSentence = document.getElementById("sidebarSentence");
 const sidebarDefinition = document.getElementById("sidebarDefinition")
+
 
 // Open sidebar
 // have to loop through every button
@@ -81,37 +85,62 @@ toggleButtons.forEach(function(button) {
         
         // call the function to get the stuff from the database
         // have to use try or it won't work
-        try {
-            const response = await fetch(`/site_content/fetch-database-entry/${encodeURIComponent(clickedWord)}/`);
-            if (!response.ok) throw new Error("Translation fetch failed");
-            
-            // get the response data from the function 
-            const data = await response.json()
 
-            // add all the elements
-            // add || "No data" for if nothing is found 
-            sidebarConstruction.textContent = data.construction || "No data"
-            sidebarEnglish.textContent = data.english || "No data"
-            sidebarPartOfSpeech.textContent = data.part_of_speech || "No data"
-            sidebarSentence.textContent = data.sentence || "No data"
-            sidebarDefinition.textContent = data.definition || "No data"
-        
-            // give the clicked word the the side panel
+        // see if the word is a number
+        if (!isNaN(clickedWord) && clickedWord.trim() !== "") {
             sidebarWord.textContent = clickedWord;
-
+            vocabBtn.href = `/my-vocabulary/add-vocabulary-word/${encodeURIComponent(clickedWord)}/`;
+            sidebarEnglish.textContent = clickedWord;
+            
             // open the side panel
             sidebar.style.width = "400px";
+
+            // hide to vocab button
+            vocabBtn.style.display = "none";
+
             // only do this if there's not an error
             if (mainContent) {
                 mainContent.style.marginRight = "400px"; 
             }
+        } else {
+            try {
+                const response = await fetch(`/site_content/fetch-database-entry/${encodeURIComponent(clickedWord)}/`);
+                if (!response.ok) throw new Error("Translation fetch failed");
+                
+                // get the response data from the function 
+                const data = await response.json()
 
-        } catch (error) {
-            console.error("Error fetching word details:", error);
-            // Optional: Open the sidebar anyway to show an error message
-            sidebarWord.textContent = clickedWord;
-            sidebarEnglish.textContent = "Error loading data.";
-            sidebar.style.width = "400px";
+                // add all the elements
+                // add || "No data" for if nothing is found 
+                sidebarConstruction.textContent = data.construction || "No data"
+                sidebarEnglish.textContent = data.english || "No data"
+                sidebarPartOfSpeech.textContent = data.part_of_speech || "No data"
+                sidebarSentence.textContent = data.sentence || "No data"
+                sidebarDefinition.textContent = data.definition || "No data"
+            
+                // give the clicked word the the side panel
+                sidebarWord.textContent = clickedWord;
+
+                // make the button visible
+                vocabBtn.style.display = "inline-block";
+                // change the button in the sidebar
+                // # means variable href in the button tag
+                vocabBtn.href = `/my-vocabulary/add-vocabulary-word/${encodeURIComponent(clickedWord)}/`;
+
+                // open the side panel
+                sidebar.style.width = "400px";
+                // only do this if there's not an error
+                if (mainContent) {
+                    mainContent.style.marginRight = "400px"; 
+                }
+
+            } catch (error) {
+                console.error("Error fetching word details:", error);
+                // Optional: Open the sidebar anyway to show an error message
+                sidebarWord.textContent = clickedWord;
+                sidebarEnglish.textContent = "Word not found in dictionary";
+                sidebar.style.width = "400px";
+            }
         }
     });    
 });
@@ -214,3 +243,10 @@ closeBtn.addEventListener("click", function() {
 </style>
 
 {% endblock %}
+
+<!-- 
+NOTES: Right now there is an error if the word is not in the database but I think that's okay for now 
+since for content to be added each word needs in the content needs an entry until it can be saved. 
+Can also do something about proper nouns but I feel like that's not super important. If people want to mess around and add it to their 
+dictionary that's okay. 
+-->

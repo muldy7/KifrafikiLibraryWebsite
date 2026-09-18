@@ -1,22 +1,312 @@
 from django.test import TestCase
-
+from dictionary.tests import create_basic_entry # need for create words to add to a user's list
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from .models import ListAddition, VocabularyList
+from dictionary.models import DictionaryEntry
+from django.contrib.messages import get_messages # to get error messages
 # Create your tests here.
 """
 TESTS TO MAKE:
-1. if the user doesnt have a list it should make a new one
-2. cant add a word to the list if the user isnt logged in
-3. cant add a word that doesn't exist
-4. do something this for the add word: url = reverse("site_content:fetch-database-entry", kwargs={"word": "test"})
-5. should add a word that already is on the list to the list
+1. if the user doesnt have a list it should make a new one (DONE)
+2. cant add a word to the list if the user isnt logged in (DONE)
+3. cant add a word that doesn't exist (DONE)
+4. do something this for the add word: url = reverse("site_content:fetch-database-entry", kwargs={"word": "test"}) (DONE)
+5. should not add a word that already is on the list to the list (DONE)
+6. test if the definition changes on the list if we change the word (DONE)
+7. delete a single word
+8. delete the full list
+""" 
+
 """
+VOCABULAR LIST FUNCTIONS
+"""
+def create_user(self,username):
+    """
+    This function creates a user so it can be used with the form that requires a user sign in
+    Can take different usernames for testing different users 
+    """
+    CustomUser = get_user_model()
+    self.user = CustomUser.objects.create_user(username=username, password="password123")
+    self.client.login(username=username, password="password123") # Log the user in!
+
+"""
+VOCABULARY LIST TESTS
+"""
+class VocabularyListNoUserTests(TestCase):
+    def test_no_user_login(self):
+        """
+        The vocabulary list should not allow an addition to the list if the user is not logged in
+        """
+        create_basic_entry("test")
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # it should ask the user to login with a redirect
+        
+    def test_vocab_list(self):
+        """
+        The user should be asked to login if they try and access the vocab list without a login
+        """
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+class VocabularyListUserTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        """
+        Set up function that will be run automatically ONCE then all the tests are done
+        Best from read-only data that can't be modified
+        """
+        # set up a basic user for all tests
+        CustomUser = get_user_model()
+        cls.user = CustomUser.objects.create_user(username="test_user", password="password123")
+
+    def setUp(self):
+            """
+            This code is done before EVERY test 
+            """
+            # log the user in since it was getting messed up in setUpTestData
+            self.client.login(username="test_user", password="password123") 
+    
+            return super().setUp()
+
+    """
+    TESTS
+    """
+    def test_user_no_list(self):
+        """
+        Test if a list is create if they try and access the site without a list
+        """
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your vocabulary list is empty. Start adding words!")
+        self.assertTemplateUsed(response, "vocabulary/user_vocab_list.html")
+
+    def test_word_doesnt_exist(self):
+        """
+        Test if a word refuses if it doesnt exist
+        """
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should redirect to home
+
+        # get the error message
+        storage = get_messages(response.wsgi_request)
+        messages_list = list(storage)
+        
+        # check the message matches
+        message = messages_list[0]
+        # check the exact text
+        self.assertEqual(message.message, "Error 'test' Not found in database.")
+
+    def test_successful_save(self):
+        """
+        Test if a word can we saved to the vocab list as expected
+        """
+        create_basic_entry("test")
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should be a 204 if successful
+
+        # test if the word is on the list
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "test")
+
+    def test_adding_word_twice(self):
+        """
+        Test if a word is refused if its already on the list
+        """
+        create_basic_entry("test")
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should redirect to home
+
+        # try adding the word again
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        
+        # get the error message
+        storage = get_messages(response.wsgi_request)
+        messages_list = list(storage)
+        
+        # check the message matches
+        message = messages_list[1] # will be the second message in the list
+        # check the exact text
+        self.assertEqual(message.message, "Error 'test' Is already in your vocabulary list.")
+
+    def test_translation_changes(self):
+        """
+        Test that a word on the list updates if the word is update elsewhere
+        """
+        test_entry = create_basic_entry("test")
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should be a 204 if successful
+
+        # test if the word is on the list
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "test")
+        self.assertContains(response, "default") # the first definition
+        
+
+        # change the english translation
+        test_entry.english = "This is an updated field"
+        test_entry.save()
+
+        # test to see if the list has been updated
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This is an updated field")
+
+    def test_delete_list_addition(self):
+        """
+        Test to see if the delete a single list addiiton works
+        """
+        create_basic_entry("test")
+        test_word = create_basic_entry("another word")
+
+        # add the first word
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should redirect to home
+
+        # add the second word
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "another word"})
+        response = self.client.get(url)
+
+        # get the list addition
+        test_list = VocabularyList.objects.get(owner=self.user)
+        test_addition = ListAddition.objects.get(vocab_list= test_list, word = test_word.pk)
+
+        # get url for the delete page using pk
+        url = reverse("vocabulary:delete-word", kwargs={"pk": test_addition.pk}) # including reverse in the url
+
+        # test that it opens the delete confirmation page
+        response = self.client.get(url)
+        self.assertContains(response, "Are you sure you want to delete")
+
+        # test delete case using post
+        response = self.client.post(url) # post to make sure it deletes
+        self.assertEqual(response.status_code, 302) # should respond with 302 to redirect and delete the strings
+
+        # make sure that "test" is still on the list
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertContains(response, "test")
+        self.assertNotContains(response, "Your vocabulary list is empty. Start adding words!")
+
+    def test_delete_entire_list(self):
+        """
+        Test to see if the delete the entire list works
+        """
+        create_basic_entry("test")
+        create_basic_entry("another word")
+
+        # add the first word
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should redirect to home
+
+        # add the second word
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "another word"})
+        response = self.client.get(url)
+
+        # get the list addition
+        test_list = VocabularyList.objects.get(owner=self.user)
+
+        # get url for the delete page using pk
+        url = reverse("vocabulary:delete-list", kwargs={"pk": test_list.pk}) # including reverse in the url
+
+        # test that it opens the delete confirmation page
+        response = self.client.get(url)
+        self.assertContains(response, "Are you sure you want to delete")
+
+        # test delete case using post
+        response = self.client.post(url) # post to make sure it deletes
+        self.assertEqual(response.status_code, 302) # should respond with 302 to redirect and delete the strings
+
+        # make sure that "test" is still on the list
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertNotContains(response, "test")
+        self.assertContains(response, "Your vocabulary list is empty. Start adding words!")
+
+    def test_different_user_lists(self):
+        """
+        Test to make sure if two different users have the same word on their list it won't be deleted
+        from both lists,
+
+        """
+        test_entry = create_basic_entry("test") # make a entry that's to compare against
+
+        # add the first word
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": test_entry.swahili_entry})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should redirect to home
+
+        # store the current user
+        user1 = self.user
+
+        # add a user
+        create_user(self,"testuser_2")
+
+        # add the same word to the different user's list
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": test_entry.swahili_entry})
+        response = self.client.get(url)
+
+        # get the list addition
+        test_list = VocabularyList.objects.get(owner=self.user)
+        test_addition = ListAddition.objects.get(vocab_list= test_list, word = test_entry.pk)
+
+        # get url for the delete page using pk
+        url = reverse("vocabulary:delete-word", kwargs={"pk": test_addition.pk}) # including reverse in the url
+
+        # test that it opens the delete confirmation page
+        response = self.client.get(url)
+        self.assertContains(response, "Are you sure you want to delete")
+
+        # test delete case using post
+        response = self.client.post(url) # post to make sure it deletes
+        self.assertEqual(response.status_code, 302) # should respond with 302 to redirect and delete the strings
+
+        # make sure that "test" is not on user 2's list
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertNotContains(response, "test")
+        self.assertContains(response, "Your vocabulary list is empty. Start adding words!")
+
+        # login original user
+        self.client.login(username=user1, password="password123") 
+
+        # make sure the word is still here
+        url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(url)
+        self.assertContains(response, "test")
+        self.assertNotContains(response, "Your vocabulary list is empty. Start adding words!")
+
+
 
 """
 WORK PLAN:
-1. make test for what is working 
-2. add delete button and clickable link to the vocab list
-3. make vocab list button in the sidebar
+1. make test for what is working (DONE)
+2. add delete button and clickable link to the vocab list (DONE)
+3. make vocab list button in the sidebar (DONE)
 4. make an export to anki or csv button
 5. have fun!
+6. only ask ai when im supeer stuck and have it look for issues instead of it just telling me what to do. I should understand
+7. put stuff in the footer
+8. add a simple css to the website
+9. add a bug list and entry button to the core app
+10. more tests
+11. log in doesnt need to be there if theyve already logged in
+12. need a create account page
 
 """
 # need to add messages to the dictionary detail page
