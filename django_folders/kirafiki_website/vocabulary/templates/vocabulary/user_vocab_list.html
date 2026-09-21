@@ -10,7 +10,17 @@
     <!-- get the list from the entries and send the pk -->
     <form action="{% url 'vocabulary:delete-list' pk=vocab_entries.first.vocab_list.pk %}" method="post" style="display:inline;">
     {% csrf_token %}
-    <button type="submit" class="btn-delete" onclick="return confirm('Are you sure you want to clear your list?');"">Clear List</button>
+    <button type="submit" class="btn-delete" onclick="return confirm('Are you sure you want to clear your list?');">Clear List</button>
+    </form>
+    <!-- export to anki file button -->
+    <form action="{% url 'vocabulary:export-anki-deck' %}" method="get" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn-create" >Export to Anki File</button>
+    </form>
+    <!-- export to .csv button -->
+    <form action="{% url 'vocabulary:export-csv-file' %}" method="get" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn-create" >Export to .csv File</button>
     </form>
     {% endif %}
 </p>

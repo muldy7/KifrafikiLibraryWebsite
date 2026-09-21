@@ -11,6 +11,12 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic.edit import UpdateView, DeleteView
+import csv
+import io
+import genanki
+from django.http import FileResponse
+from django.views.decorators.http import require_GET
+from .services import create_note,create_deck, make_model # from services.py to make the anki deck
 # Create your views here.
 
 # how to do values using through
@@ -107,10 +113,94 @@ class VocabListDeleteView(SuccessMessageMixin,LoginRequiredMixin,DeleteView):
     success_message = "List cleared successfully" # this will get shown at the top of the list view
 
 
+@require_GET
+def export_anki_deck(request):
     """
-    VIEWS TO ADD:
-    1. delete one (DONE)
-    2. clear list (DONE)
-    3. export to csv
-    4. export to anki
+    This view is to be used with a button in the vocabulary page to export a anki deck 
+    from the user's vocabulary list
     """
+    # create the notes 
+    model = make_model()
+
+    # get the user's list
+    vocab_list = VocabularyList.objects.get(owner=request.user)
+
+    # get all the words from the list as django objects
+    vocab_words = ListAddition.objects.filter(vocab_list=vocab_list)
+
+    # create a note list to add to
+    note_list = []
+    # loop through the words in the list
+    for addition in vocab_words:
+        word = addition.word
+        entry = DictionaryEntry.objects.get(swahili_entry=word)
+        note = create_note(model=model,swahili=entry.swahili_entry,english=entry.english,example=entry.sentence)
+        note_list.append(note)
+
+    # create a deck with the note list
+    deck = create_deck(note_list)
+
+    # make a buffer to put the file
+    anki_buffer = io.BytesIO()
+
+    # package the list 
+    package = genanki.Package(deck)
+
+    # write the package to a file in a buffer
+    package.write_to_file(anki_buffer)
+
+    # start from the beginning of the stream
+    anki_buffer.seek(0)
+
+    # create the file response
+    response = FileResponse(
+        anki_buffer, 
+        as_attachment=True, 
+        filename='kirafiki_vocabulary.apkg',
+        content_type='application/apkg'
+    )
+    
+    return response
+
+@require_GET
+def export_to_csv(request):
+    """
+    This view is for taking the user's vocabulary list and exporting it to a csv
+    from there the user can export it to google sheets or whatever they want.
+    """
+    vocab_list = VocabularyList.objects.get(owner=request.user)
+    
+    # get all the words from the list as django objects
+    vocab_words = ListAddition.objects.filter(vocab_list=vocab_list)
+    
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(
+        content_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="kirafiki_vocabulary.csv"'},
+    )
+
+    # create the basic file
+    writer = csv.writer(response)
+    writer.writerow(["Swahili Word", "English Translation", "Part of Speech", "Swahili Definition", "Examples", "Construction"])
+
+    # add each word to the .csv
+    for addition in vocab_words:
+        word = addition.word
+        entry = DictionaryEntry.objects.get(swahili_entry=word)
+        writer.writerow([entry.swahili_entry, entry.english, entry.part_of_speech, entry.swahili_definition, entry.sentence, entry.construction])
+
+    return response
+
+"""
+VIEWS TO ADD:
+1. delete one (DONE)
+2. clear list (DONE)
+3. export to csv
+4. export to anki (DONE)
+5. css for the anki is weird?
+6. the add to vocab list gets messed up if there is a capital
+7. can customize the look of the anki decks
+8. water.css looks so freaking sick!!!!!!
+9. lets do the rest once I'm well rested and have fun with it lets go!
+10. create and account view
+"""
