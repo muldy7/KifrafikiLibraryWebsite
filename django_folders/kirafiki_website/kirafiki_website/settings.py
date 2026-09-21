@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'dictionary.apps.DictionaryConfig',
     'site_content.apps.SiteContentConfig',
     'core.apps.CoreConfig',
-    'vocabulary.apps.VocabularyConfig'
+    'vocabulary.apps.VocabularyConfig',
+    'import_export'
 ]
 
 MIDDLEWARE = [

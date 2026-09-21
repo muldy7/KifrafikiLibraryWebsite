@@ -9,7 +9,6 @@ from django.utils.text import slugify
 # form file for having a way to upload stories to the website
 class ContentUpdateForm(forms.ModelForm):
     """
-    One form = one row in the word table.
     ModelForm automatically builds form fields that match the model fields
     listed in Meta.fields, and knows how to save() directly to that model.
     """

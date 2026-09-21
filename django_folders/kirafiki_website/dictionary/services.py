@@ -7,10 +7,13 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views import generic
 from django.utils import timezone 
-from deep_translator import GoogleTranslator, MyMemoryTranslator
+from deep_translator import GoogleTranslator, MyMemoryTranslator, DeeplTranslator
 import string 
 import requests
 import re
+import deepl
+import time
+
 
 #from .models import DictionaryEntry
 
@@ -31,13 +34,15 @@ import re
 #https://freedictionaryapi.com/
 #https://freeapihub.com/blog/free-dictionary-api-tutorial-word-lookup-tool
 # https://docs.python.org/3/library/re.html
+# https://www.deepl.com/en/your-account/keys
+# https://pypi.org/project/deep-translator/
+
 
 # function to import into my file
 # function to just get a definition since some can be annoying if they are infinitives or plurals but will need more testing
 def letter_counter(string):
     """
-    This is a simple function to count the letters in a string
-    This will exclude any punctuation 
+    This is a simple function to count the letters in a string which will exclude any punctuation 
     """
     letter_count = 0
     for char in string:
@@ -48,6 +53,9 @@ def letter_counter(string):
 
 
 def simple_lookup(word):
+    """
+    This function use the free dictionary api to look for the swahili word, but only returns the defintion
+    """
     url = f"https://freedictionaryapi.com/api/v1/entries/sw/{word}?translations=true" # url used for kiswahili
     try:
         response = requests.get(url, timeout=5) # try and skip if its taking too long
@@ -96,6 +104,9 @@ def simple_lookup(word):
 
 # main look up function to be used with my translate funciton 
 def lookup_word(word):
+    """
+    This function uses the free dictionary api to look for the swahili word while also return anything it finds
+    """
     # thank you chatgpt for this regex pattern to elimate the silly stuff from the api call
     # Regex breakdown:
     pattern = r'\[\[[^]#]+#(.*?)\|.*?\]\]'
@@ -280,11 +291,21 @@ def lookup_word(word):
 
 # text needs to be input as clean text
 def simple_translate(text):
+    """
+    This function tries different apis to get a translation
+    """
+    # load deepl api for translation
+    auth_key = "f25f4efb-0e72-49e7-9ff5-d24c9c4841c5:fx" # replace with your key
+    deepl_client = deepl.DeepLClient(auth_key)
+    
     try:
         # Use translation fallback to GoogleTranslate
-        definition = GoogleTranslator(source='sw', target='en').translate(text)
+        #definition = DeeplTranslator(api_key="f25f4efb-0e72-49e7-9ff5-d24c9c4841c5:fx", source = "da", target = "en", use_free_api=True).translate(text)
+        #definition = GoogleTranslator(source='sw', target='en').translate(text)
         #source = "GoogleAPI" 
-        
+        result = deepl_client.translate_text(text, target_lang="EN-US")
+        definition = result.text
+        source = "DeepL Translate"
       
     except Exception as e:
         print(f"Error during API translation/saving: {e}")
@@ -292,27 +313,31 @@ def simple_translate(text):
         try:
             print("trying again") # my memory translator really sucks so I'll get an API figured out for DeepL, can use something else here in case google fails
             definition = GoogleTranslator(source='sw', target='en').translate(text)
-            #source = "GoogleAPI"    # not sure if this is the best way to do it but we'll see, doing a lot of work then can ask for help. 
+            source = "GoogleAPI"    # not sure if this is the best way to do it but we'll see, doing a lot of work then can ask for help. 
     
         except Exception as e:
             print(f"Error during API translation/saving: {e}")
             try:
                 print("trying again with my memory translator") # my memory translator really sucks so I'll get an API figured out for DeepL, can use something else here in case google fails
                 definition = MyMemoryTranslator(source='swahili', target='english').translate(text)
-                #source = "GoogleAPI"    # not sure if this is the best way to do it but we'll see, doing a lot of work then can ask for help. 
+                source = "MyMemoryTranslator"    # not sure if this is the best way to do it but we'll see, doing a lot of work then can ask for help. 
                 
             except Exception as e:
                 print(f"Error during API translation/saving: {e}")
                 definition = "No Definition Found" 
              
 
-    return definition
+    return definition, source
 
 # give a list of examples so it can translate each one into a long string
 def example_translate(list):
+    """
+    This function translates a list of examples if it is found in the free dictionary api call
+    """
     examples = ""
     # for loop to add all the examples from the list in
     for example in list:
+        #time.sleep(0.3)
         if examples != "":
             examples = examples + '; ' + example + ' = ' + simple_translate(example) # make a longer list
         else:
@@ -321,6 +346,9 @@ def example_translate(list):
     return examples 
 
 def translate_word(text):
+    """
+    This function puts everything together and is what is used on the website to translate words
+    """
     # big ups to google AI for this helpful bit
     # Standardise text: remove punctuation and make lowercase
     #clean_text = text.replace('\r\n', ' ').replace('\n', ' ')   # remove any time enter has been pressed
@@ -355,13 +383,12 @@ def translate_word(text):
     # see if there's nothing in the api call result 
     if api_call is None: 
         # use simple translate to get text from the api
-        definition = simple_translate(clean_text)
-        source = "GoogleTranslate" 
-
+        definition, source = simple_translate(clean_text)
+        
     # see if there's only no definition from the api call 
     elif api_call[0] is None: # could probably put this google api in a seperate function since i'm doing it twice, 
         # get the definition but just the definiton from google translate
-        definition = simple_translate(clean_text)
+        definition, source = simple_translate(clean_text)
 
         # get the other things from the Free Dictionary API
         part_of_speech = api_call[1] 
@@ -404,6 +431,7 @@ def translate_word(text):
     return new_entry # output as a dictionary field 
 
 
+# TEST CODE
 if __name__ == "__main__":
 
     # testing code for lookup_word with free api call
@@ -417,7 +445,7 @@ if __name__ == "__main__":
     # test the translate word function
     # new_entry = translate_word("mbuzi") # mbuzi should only output one part of speech even though it has different definitions
     #new_entry = translate_word("ng'ombe") # ng'ombe works fine with the apostrephe this entry has a lot of examples too 
-    new_entry = translate_word("sitaki")
+    new_entry = translate_word("mbwa")
     print(new_entry)
     print(new_entry["swahili_entry"])
     example = new_entry['sentence']

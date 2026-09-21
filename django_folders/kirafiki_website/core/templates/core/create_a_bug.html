@@ -1,0 +1,12 @@
+<!-- html for the create a bug form -->
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Bug Report Form</h1>
+<form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Save">
+</form>
+
+<p> Thank you for being a helpful member of the community!</p>
+{% endblock %}

@@ -27,7 +27,7 @@ class Content(models.Model):
     )
 
     # copyright/data fields
-    source = models.CharField(max_length=500,default="No source found") # for setting where the article may be sourced from through a link
+    source = models.CharField(max_length=500,default="No source found", help_text="Where is this content from? (URL, etc.)") # for setting where the article may be sourced from through a link
 
     # set choice for status
     class Status(models.TextChoices): # set the different status the story can be (DRAFT OR PUBLISHED)

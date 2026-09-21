@@ -68,11 +68,22 @@ class ContentModelTests(TestCase):
 
     def test_entries_listed(self):
         """
-        Test to see if there are entries listed on the list view
+        Test to see if there are entries listed on the list view, only those set to 'Published' are visible
         """
         entry = create_content("test entry")
         response = self.client.get(reverse("site_content:content-list"))
-        self.assertContains(response, "test entry") # make sure the title is in the list
+        self.assertNotContains(response, "test entry") # make sure the title is not in the list since it isn't 'Published
+
+        # set the article to 'Published'
+        entry.status = 'P'
+
+        # save the entry
+        entry.save()
+
+        # check the list again
+        response = self.client.get(reverse("site_content:content-list"))
+        self.assertNotContains(response, "No stories yet.")
+        self.assertContains(response, "test entry")
 
     def test_none_listed(self):
         """

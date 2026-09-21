@@ -14,7 +14,7 @@ from django.views.generic.edit import UpdateView, DeleteView
 import csv
 import io
 import genanki
-from django.http import FileResponse
+from django.http import FileResponse, Http404
 from django.views.decorators.http import require_GET
 from .services import create_note,create_deck, make_model # from services.py to make the anki deck
 # Create your views here.
@@ -71,7 +71,9 @@ def add_vocabulary_word(request,word):
     else:
         messages.error(request, f"Error '{word}' Not found in database.")
 
-        return redirect('home/') # just go home idk this is only for testing
+        # add a 404 error if I want? idk
+        #raise Http404("Question does not exist")
+        return redirect(reverse_lazy('home')) # just go home idk this is only for testing
     # send a success message
     messages.success(request, f"Succes! '{word}' has been added to your vocabulary list.")
     # have to end with a return
@@ -195,10 +197,10 @@ def export_to_csv(request):
 VIEWS TO ADD:
 1. delete one (DONE)
 2. clear list (DONE)
-3. export to csv
+3. export to csv (DONE)
 4. export to anki (DONE)
 5. css for the anki is weird?
-6. the add to vocab list gets messed up if there is a capital
+6. the add to vocab list gets messed up if there is a capital (DONE)
 7. can customize the look of the anki decks
 8. water.css looks so freaking sick!!!!!!
 9. lets do the rest once I'm well rested and have fun with it lets go!

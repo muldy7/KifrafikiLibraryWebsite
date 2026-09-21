@@ -12,11 +12,14 @@ from dictionary.models import DictionaryEntry
  
  
 class ContentListView(ListView):
-    """Shows all stories, newest first."""
     model = Content
     template_name = "site_content/content_list.html"
     context_object_name = "stories"
     ordering = ["-pub_date"]
+
+    # make it so the list view only shows articles that are 'published'
+    def get_queryset(self):
+        return Content.objects.filter(status='P') # have to use the code that django uses oops haha
  
  
 class ContentDetailView(DetailView):

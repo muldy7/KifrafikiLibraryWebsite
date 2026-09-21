@@ -3,14 +3,71 @@
 {% block content %}
 <h1>Stories</h1>
 
-<ul>
+<label for="content_level">Choose your level:</label>
+
+<select name="content_level" id="content_level" required> 
+    <!-- Checks if the view passed back this specific value to keep it selected -->
+    <option value="B" {% if content_level == "B" %}selected{% endif %}>Beginner</option>
+    <option value="I" {% if content_level == "I" %}selected{% endif %}>Intermediate</option>
+    <option value="A" {% if content_level == "A" %}selected{% endif %}>Advanced</option>
+    <option value="N" {% if content_level == "N" %}selected{% endif %}>News Article</option>
+    <option value="all">All Levels</option>
+</select>
+
+<!-- i'll add a margin here later with css -->
+
+<ul id="content_list">
+    <!-- might want to change this since it loads all the stories at once -->
     {% for content in stories %}
-        <li>
-            <a href="{% url 'site_content:content-detail' content.slug %}">{{ content.title }}</a>
+        <li class="content-object" data-level="{{content.level}}">
+            <a href="{% url 'site_content:content-detail' content.slug %}">{{ content.title }} ({{content.level}})</a>
             &mdash; {{ content.pub_date }} by {{ content.author }}
         </li>
     {% empty %}
         <li>No stories yet.</li>
     {% endfor %}
+        <!-- make a list object for when there is nothing in the sort -->
+        <li id="no_content" data-level="no_content">Nothing here yet.</li>
 </ul>
+
+<!-- add script for changing the choices dynamically -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('content_level');
+    const objects = document.querySelectorAll('.content-object');
+    const noObject = document.getElementById('no_content');
+
+    function filterContent() {
+        const selectedLevel = select.value;
+        
+        // count how many articles are displayed
+        let objectCount = 0
+
+        // use the stored data level to change change the visibility (just like the vocab button)
+        objects.forEach(object => {
+            const objectLevel = object.getAttribute('data-level');
+        
+            // the code displays all the stories but changes the visibility of the articles depending on what their content level is 
+            if (selectedLevel === 'all' || objectLevel === selectedLevel) {
+                    object.style.display = '';
+                    objectCount += 1
+                    
+                } else {
+                    object.style.display = 'none';
+                }
+            });
+        // put "no entries yet" if there's nothing in the list 
+        if (objectCount != 0) {
+            noObject.style.display = 'none';
+            } else {
+                 noObject.style.display = '';
+            }
+        }
+        select.addEventListener('change', filterContent);
+        filterContent(); // Run on page load
+    });
+
+</script>
 {% endblock %}
+
+

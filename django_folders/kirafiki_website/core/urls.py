@@ -10,5 +10,5 @@ urlpatterns = [
     path("", views.home_view, name="home"),
     path("about/", views.about_view, name="about"),
     path("home/", views.home_view, name="home"),
-    
+    path("submit-a-bug/",views.SubmitABug.as_view(), name="submit-a-bug")
 ]

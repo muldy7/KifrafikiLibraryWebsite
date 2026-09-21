@@ -95,7 +95,7 @@ toggleButtons.forEach(function(button) {
             // open the side panel
             sidebar.style.width = "400px";
 
-            // hide to vocab button
+            // hide the vocab button
             vocabBtn.style.display = "none";
 
             // only do this if there's not an error
@@ -123,9 +123,12 @@ toggleButtons.forEach(function(button) {
 
                 // make the button visible
                 vocabBtn.style.display = "inline-block";
-                // change the button in the sidebar
+
+                // change the button in the sidebar to add to vocabulary list
+                // make the word lower case first just in case
+                const vocabWord = clickedWord.toLowerCase()
                 // # means variable href in the button tag
-                vocabBtn.href = `/my-vocabulary/add-vocabulary-word/${encodeURIComponent(clickedWord)}/`;
+                vocabBtn.href = `/my-vocabulary/add-vocabulary-word/${encodeURIComponent(vocabWord)}/`;
 
                 // open the side panel
                 sidebar.style.width = "400px";
@@ -140,6 +143,9 @@ toggleButtons.forEach(function(button) {
                 sidebarWord.textContent = clickedWord;
                 sidebarEnglish.textContent = "Word not found in dictionary";
                 sidebar.style.width = "400px";
+
+                // hide the vocab button
+                vocabBtn.style.display = "none";
             }
         }
     });    
