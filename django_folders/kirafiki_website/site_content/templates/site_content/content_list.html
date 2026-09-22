@@ -20,7 +20,7 @@
     <!-- might want to change this since it loads all the stories at once -->
     {% for content in stories %}
         <li class="content-object" data-level="{{content.level}}">
-            <a href="{% url 'site_content:content-detail' content.slug %}">{{ content.title }} ({{content.level}})</a>
+            <a href="{% url 'site_content:reader-view' content.slug %}">{{ content.title }} ({{content.level}})</a>
             &mdash; {{ content.pub_date }} by {{ content.author }}
         </li>
     {% empty %}

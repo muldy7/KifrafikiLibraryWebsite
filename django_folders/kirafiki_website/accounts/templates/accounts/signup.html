@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<head>
+    <title>Create an Account</title>
+</head>
+<body>
+    <h2>Create an Account</h2>
+    
+    <form method="POST">
+        <!-- The CSRF token is mandatory for security in Django POST forms -->
+        {% csrf_token %} 
+        
+        <!-- Render the built-in form fields wrapped in paragraph tags -->
+        {{ form.as_p }} 
+        
+        <button type="submit">Sign Up</button>
+    </form>
+
+    <p>Already have an account? <a href="{% url 'login' %}">Log in here</a></p>
+</body>
+
+{% endblock %}

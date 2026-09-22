@@ -14,7 +14,7 @@ from site_content.models import Content
 from .forms import DictionaryEntryForm, DictionaryUpdateForm
 from django.utils import timezone
 from django.utils.text import slugify
-from django.views.generic.edit import UpdateView, DeleteView
+from django.views.generic.edit import UpdateView, DeleteView, CreateView
 from django.urls import reverse_lazy, reverse
 
 
@@ -85,6 +85,14 @@ class DictionaryDeleteView(SuccessMessageMixin,LoginRequiredMixin,DeleteView):
     success_url = reverse_lazy("dictionary:dictionary-list") # can't forget the app name
     success_message = "Entry deleted successfully" # this will get shown at the top of the list view
     #messages.success("Dictionary Entry Deleted") this doesn't work since it needs the current http response
+
+# create a entry view if I want to add it later
+# class DictionaryEntryCreateView(SuccessMessageMixin,LoginRequiredMixin, CreateView):
+#     """
+#     This view is for adding a word to the dictionary using django generic views
+#     """
+#     model = DictionaryEntry
+#     fields = 
 
 # FUNCTIONS FROM CLAUDE
 # I should not trust these 100% and make sure I learn what is going on here 

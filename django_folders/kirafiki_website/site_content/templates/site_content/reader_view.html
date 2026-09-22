@@ -8,10 +8,10 @@
     
     <!-- dynamically show the word on the side bar -->
     <div class="sidebar-content">
-        <h2 id="sidebarWord">Select a word</h2>
-        
-        <a id="vocabBtn" href="#" class="vocab-btn" style="display: inline-block; text-align: center;">Add To Vocab List</a>
-
+        <div class="sidebar-header-row">
+            <h2 id="sidebarWord">Select a word</h2>
+            <a id="vocabBtn" href="#" class="vocab-btn" title="Add To Vocab List">+</a>
+        </div>
         <p class="english"><strong>English:</strong> <span id="sidebarEnglish">Select a word</span></p>
         <p class="pos"><strong>Part of speech:</strong> <span id="sidebarPartOfSpeech">Select a word</span></p>
         <section>
@@ -53,6 +53,12 @@
     </p>
 </article>
 
+<footer class="meta">
+    <p>Last modified: {{ last_modified }}</p>
+
+    <!-- see if we got a link or just text from the source (target = "_blank" means it will open in new tab)-->
+    <p>Source: {%if "https" in source %} <a href={{source}} target="_blank">Source Link</a> {% else %} {{source}} {% endif %}</p>
+</footer>
 
 <!-- java script code for the button --> 
 <!-- java is the functional elements of the webiste while html is just the layout -->
@@ -199,6 +205,22 @@ closeBtn.addEventListener("click", function() {
     margin-left: 50px;
 }
 
+.sidebar-header-row {
+  display: flex;
+  gap: 20 px;
+  align-items: center;
+}
+
+.sidebar .vocab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  border-radius: 50%;
+  color: #b3b3b3;
+  text-decoration: none;
+}
+
 /* Push main content when sidebar is open (optional) */
 .main {
     transition: margin-left 0.3s;
@@ -220,7 +242,7 @@ closeBtn.addEventListener("click", function() {
 /* Optional: Add a subtle feedback effect when hovering over the word */
 .toggle-btn:hover {
     color: #007bff;         /* Changes color slightly on hover (e.g., Bootstrap blue) */
-    text-decoration: underline; /* Adds an underline to show it behaves like a link */
+    /* text-decoration: underline; Adds an underline to show it behaves like a link */
 }
 
 /* Target the content container inside the sidebar */
@@ -228,6 +250,10 @@ closeBtn.addEventListener("click", function() {
     padding: 20px;       /* Adds breathing room around the text */
     color: #ffffff;      /* Forces all text inside this container to be white */
     font-family: Arial, sans-serif; /* Optional: sets a clean font */
+}
+
+.sidebar-content h2 {
+    font-size: 16px;
 }
 
 /* Specifically style the dynamically loaded word */
@@ -245,6 +271,10 @@ closeBtn.addEventListener("click", function() {
     color: #b3b3b3;      
     font-size: 16px;
     line-height: 1.5;
+}
+
+footer p {
+    font-size: 14px;
 }
 </style>
 

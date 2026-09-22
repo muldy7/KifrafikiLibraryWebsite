@@ -6,8 +6,7 @@ from . import views
 
 # can add more views if I need them I guess
 app_name = "accounts"
-urlpatterns = [
-    path("",views.IndexView.as_view(), name="index"),
-    path("<int:pk>/", views.DetailView.as_view(), name="detail"),
 
+urlpatterns = [
+    path('signup/', views.SignUpView.as_view(), name="signup")
 ]

@@ -101,7 +101,9 @@ def reader_view(request,slug): # <---- can give the view the slug and then it ca
         "structured_content": structured_content,
         "author": content.author,
         "pub_date": content.pub_date,
-        "title": content.title
+        "title": content.title,
+        "source": content.source,
+        "last_modified": content.last_modified
                } # this is the context given to the website
 
     # i can give the view whatever I need in "context"

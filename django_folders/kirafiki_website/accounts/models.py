@@ -7,6 +7,6 @@ from django.db import models
 # there is a built-in model but it is reccomended to use this just incase I want to update it later
 class CustomUser(AbstractUser):
     # I can add more stuff here if I want to
-    
+
     def __str__(self):
         return self.username

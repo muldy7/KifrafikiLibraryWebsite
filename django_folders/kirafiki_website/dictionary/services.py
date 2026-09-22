@@ -13,7 +13,8 @@ import requests
 import re
 import deepl
 import time
-
+import os
+from dotenv import load_dotenv
 
 #from .models import DictionaryEntry
 
@@ -289,26 +290,36 @@ def lookup_word(word):
 # HELPFUL LINKS
 # python dictionaries: https://www.w3schools.com/python/python_dictionaries.asp
 
+# init the deepl stuff
+# get my api key from the ignored env file
+load_dotenv()
+# load deepl api for translation
+auth_key = os.getenv("API_KEY") # replace with your key
+deepl.http_client.min_connection_timeout = 5.0 # set the timeout 
+deepl.http_client.max_network_retries = 0 # stop it from trying a bunch behind the scenes
+deepl_client = deepl.DeepLClient(auth_key)
+
+#print(auth_key)
+
 # text needs to be input as clean text
 def simple_translate(text):
     """
     This function tries different apis to get a translation
     """
-    # load deepl api for translation
-    auth_key = "f25f4efb-0e72-49e7-9ff5-d24c9c4841c5:fx" # replace with your key
-    deepl_client = deepl.DeepLClient(auth_key)
-    
+
     try:
         # Use translation fallback to GoogleTranslate
         #definition = DeeplTranslator(api_key="f25f4efb-0e72-49e7-9ff5-d24c9c4841c5:fx", source = "da", target = "en", use_free_api=True).translate(text)
         #definition = GoogleTranslator(source='sw', target='en').translate(text)
         #source = "GoogleAPI" 
         result = deepl_client.translate_text(text, target_lang="EN-US")
+        print(result)
         definition = result.text
         source = "DeepL Translate"
-      
-    except Exception as e:
-        print(f"Error during API translation/saving: {e}")
+
+    # try all the exceptions so it doesn't fail
+    except (deepl.exceptions.ConnectionException, deepl.exceptions.DeepLException, Exception) as e:
+        print(f"Error during DeepL API translation/saving: {e}")
                     
         try:
             print("trying again") # my memory translator really sucks so I'll get an API figured out for DeepL, can use something else here in case google fails
@@ -444,8 +455,8 @@ if __name__ == "__main__":
 
     # test the translate word function
     # new_entry = translate_word("mbuzi") # mbuzi should only output one part of speech even though it has different definitions
-    #new_entry = translate_word("ng'ombe") # ng'ombe works fine with the apostrephe this entry has a lot of examples too 
-    new_entry = translate_word("mbwa")
+    # #new_entry = translate_word("ng'ombe") # ng'ombe works fine with the apostrephe this entry has a lot of examples too 
+    new_entry = translate_word("sitaki")
     print(new_entry)
     print(new_entry["swahili_entry"])
     example = new_entry['sentence']
@@ -457,8 +468,26 @@ if __name__ == "__main__":
     #word = simple_translate(example)
     #print(word)
 
+    # deepl test code
+    # Create a Translator object providing your DeepL API authentication key.
+    # To avoid writing your key in source code, you can set it in an environment
+    # variable DEEPL_AUTH_KEY, then read the variable in your Python code:
+    # load_dotenv()
+    # deepl_client = deepl.DeepLClient(os.getenv("API_KEY"))
+    # # translator = deepl.Translator(os.getenv("API_KEY"))
 
-    # TESTING NOTES
+    # # Translate text into a target language, in this case, French
+    # result = deepl_client.translate_text("Hello, world!", target_lang="FR")
+    # print(result)  # "Bonjour, le monde !"
+    # # Note: printing or converting the result to a string uses the output text
+
+    # # Translate multiple texts into British English
+    # result = deepl_client.translate_text(["お元気ですか？", "¿Cómo estás?"], target_lang="EN-GB")
+    # print(result[0].text)  # "How are you?"
+    # print(result[0].detected_source_lang)  # "JA"
+    # print(result[1].text)  # "How are you?"
+    # print(result[1].detected_source_lang)  # "ES"
+    # # TESTING NOTES
     # infinitive works!
     # okay I think best thing to do is to do a flag at the end that says "hey switch construction to definition"
     # there might be cases where it doesn't work but i feel like that's okay
