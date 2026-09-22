@@ -31,7 +31,11 @@ SECRET_KEY = 'django-insecure-3qhma9@d&-y58s=m83473-6c8@i!(a=&_k$hjs-(+xq!wrd+x2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+# have to allow different websites when its posted online
+# I can add my custom domain later
+ALLOWED_HOSTS = [
+    "://onrender.com",
+]
 
 
 # Application definition
