@@ -9,7 +9,7 @@ services:
     plan: free
     name: kirafiki_website
     runtime: python
-    buildCommand: './django_folders/kirafiki_website/build.sh'
+    buildCommand: './build.sh'
     startCommand: 'python -m gunicorn kirafiki_website.asgi:application -k uvicorn.workers.UvicornWorker'
     envVars:
       - key: DATABASE_URL
