@@ -32,12 +32,16 @@ SECRET_KEY = 'django-insecure-3qhma9@d&-y58s=m83473-6c8@i!(a=&_k$hjs-(+xq!wrd+x2
 DEBUG = False
 
 # have to allow different websites when its posted online
-# I can add my custom domain later
+# Adds Render's external hostname if it exists, otherwise defaults to localhost
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+
 ALLOWED_HOSTS = [
-    "https://kirafiki-website.onrender.com",
-    "localhost", 
-    "127.0.0.1"
+    'localhost',
+    '127.0.0.1',
 ]
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
