@@ -295,6 +295,11 @@ def lookup_word(word):
 load_dotenv()
 # load deepl api for translation
 auth_key = os.getenv("API_KEY") # replace with your key
+
+# check if the auth_key is stored on the render environment
+if auth_key == None or auth_key == "":
+    os.environ.get("API_KEY")
+
 deepl.http_client.min_connection_timeout = 5.0 # set the timeout 
 deepl.http_client.max_network_retries = 0 # stop it from trying a bunch behind the scenes
 deepl_client = deepl.DeepLClient(auth_key)
