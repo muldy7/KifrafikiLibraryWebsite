@@ -1,0 +1,22 @@
+databases:
+  - name: kirafiki_websitedb
+    plan: free
+    databaseName: kirafikidb
+    user: kirafiki_website
+
+services:
+  - type: web
+    plan: free
+    name: kirafiki_website
+    runtime: python
+    buildCommand: './build.sh'
+    startCommand: 'python -m gunicorn kirafiki_website.asgi:application -k uvicorn.workers.UvicornWorker'
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kirafiki_websitedb
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
