@@ -89,18 +89,25 @@ WSGI_APPLICATION = 'kirafiki_website.wsgi.application'
 # changed to be local postgreSQL database. I think I should be able to host it
 # to AWS at some point if I need to idk how that works. 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'kirafiki_db',
+#         'USER': 'django_user',
+#         'PASSWORD': '1234567',
+#         'HOST': '127.0.0.1',  # or 'localhost'
+#         'PORT': '5432',       # Default PostgreSQL port
+#     }
+# }
+
+# set the database for using with render
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'kirafiki_db',
-        'USER': 'django_user',
-        'PASSWORD': '1234567',
-        'HOST': '127.0.0.1',  # or 'localhost'
-        'PORT': '5432',       # Default PostgreSQL port
-    }
+    'default': dj_database_url.config(
+            # Fallback to local database if DATABASE_URL environment variable doesn't exist
+            default='postgresql://postgres:postgres@localhost:5432/kirafiki_websitedb',
+            conn_max_age=600
+        )
 }
-
-
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
