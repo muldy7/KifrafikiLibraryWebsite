@@ -34,7 +34,9 @@ DEBUG = False
 # have to allow different websites when its posted online
 # I can add my custom domain later
 ALLOWED_HOSTS = [
-    "://onrender.com",
+    "https://kirafiki-website.onrender.com",
+    "localhost", 
+    "127.0.0.1"
 ]
 
 
