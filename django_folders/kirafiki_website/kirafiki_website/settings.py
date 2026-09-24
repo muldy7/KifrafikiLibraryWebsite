@@ -41,6 +41,9 @@ ALLOWED_HOSTS = [
 
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    DEBUG = False
+else:
+    DEBUG = True
 
 
 # Application definition
@@ -98,12 +101,8 @@ WSGI_APPLICATION = 'kirafiki_website.wsgi.application'
 # changed to be local postgreSQL database. I think I should be able to host it
 # to AWS at some point if I need to idk how that works. 
 
-load_dotenv()
-# load deepl api for translation
-auth_key = os.getenv("API_KEY")
-
 # load the api key from the local environment if I want to test locally
-if auth_key:
+if DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -116,7 +115,7 @@ if auth_key:
     }
 
     # SECURITY WARNING: don't run with debug turned on in production!
-    DEBUG = True
+    #DEBUG = True
 else:
     # set the database for using with render
     # I think I can change this so it auto changes the database if it is hosted locally. 
@@ -129,7 +128,7 @@ else:
     }
 
     # set debug to false if I'm using render
-    DEBUG = False
+    #DEBUG = False
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
