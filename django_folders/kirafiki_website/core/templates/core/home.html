@@ -5,7 +5,8 @@
 {% block content %}
 <article>
     <h1>Welcome to the Kirafiki Library!</h1>
-    <p>Please feel free to explore</p>
+    <p>This site is still a work in progress, please note that more content will be added in the future. </p>
+    <p>Feel free to explore, add your own content, report any bugs you find, and learn Kiswahili!</p>
     <!-- need to use the function below instead of just the basic "content.level" because that is just stored as single letter -->
    
 
@@ -13,6 +14,6 @@
 <p></p>
   <footer class="meta">
     <!-- dont need to do fancy object. because i'm just giving the http response a context list -->
-    <p>Site Version: {{ version_num }} </p>
+    <p>Site Version: {{ version_num }} BETA </p>
     <!-- see if we got a link or just text from the source (target = "_blank" means it will open in new tab)-->
 {% endblock %}

@@ -18,6 +18,8 @@ have to explain how to do posgre database if people want that
 from pathlib import Path
 import os
 import dj_database_url
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,9 +29,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-3qhma9@d&-y58s=m83473-6c8@i!(a=&_k$hjs-(+xq!wrd+x2'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
 
 # have to allow different websites when its posted online
 # Adds Render's external hostname if it exists, otherwise defaults to localhost
@@ -99,25 +98,39 @@ WSGI_APPLICATION = 'kirafiki_website.wsgi.application'
 # changed to be local postgreSQL database. I think I should be able to host it
 # to AWS at some point if I need to idk how that works. 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'kirafiki_db',
-#         'USER': 'django_user',
-#         'PASSWORD': '1234567',
-#         'HOST': '127.0.0.1',  # or 'localhost'
-#         'PORT': '5432',       # Default PostgreSQL port
-#     }
-# }
+load_dotenv()
+# load deepl api for translation
+auth_key = os.getenv("API_KEY")
 
-# set the database for using with render
-DATABASES = {
-    'default': dj_database_url.config(
-            # Fallback to local database if DATABASE_URL environment variable doesn't exist
-            default='postgresql://postgres:postgres@localhost:5432/kirafiki_websitedb',
-            conn_max_age=600
-        )
-}
+# load the api key from the local environment if I want to test locally
+if auth_key:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'kirafiki_db',
+            'USER': 'django_user',
+            'PASSWORD': '1234567',
+            'HOST': '127.0.0.1',  # or 'localhost'
+            'PORT': '5432',       # Default PostgreSQL port
+        }
+    }
+
+    # SECURITY WARNING: don't run with debug turned on in production!
+    DEBUG = True
+else:
+    # set the database for using with render
+    # I think I can change this so it auto changes the database if it is hosted locally. 
+    DATABASES = {
+        'default': dj_database_url.config(
+                # Fallback to local database if DATABASE_URL environment variable doesn't exist
+                default='postgresql://postgres:postgres@localhost:5432/kirafiki_websitedb',
+                conn_max_age=600
+            )
+    }
+
+    # set debug to false if I'm using render
+    DEBUG = False
+
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 

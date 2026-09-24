@@ -15,16 +15,5 @@ from django.contrib.auth import get_user_model
 #     user.set_password('some password') # <----- don't forget to change
 #     user.save()
 
-user = get_user_model()
-# Replace 'username_here' with the actual username
-user = CustomUser.objects.get(username="admin")
-
-# Grant admin login access
-user.is_staff = True
-
-# Optional: Grant total control (bypasses all permission checks)
-# user.is_superuser = True
-
-user.save()
 # register parts of the admin
 admin.site.register(CustomUser)

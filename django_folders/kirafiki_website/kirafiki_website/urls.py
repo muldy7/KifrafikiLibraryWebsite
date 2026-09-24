@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.contrib.auth.views import LogoutView
 from django.urls import path, include 
 
 # have to add the urls from each app to the global urls.py
@@ -26,6 +27,7 @@ urlpatterns = [
     path('dictionary/', include('dictionary.urls')),
     path('', include('core.urls')),
     path('my-vocabulary/',include('vocabulary.urls')), # want to change this later
+    path('logout/', LogoutView.as_view(), name='logout'),
 ]
 
 

@@ -134,9 +134,16 @@ class DictionaryEntryForm(forms.ModelForm):
             if self.errors:
                 return cleaned_data
 
-        else:
-        # one of the fields is empty
-            self.add_error(None, ValidationError("Please fill all fields"))
+        elif english is None:
+            # don't display an error if english is empty because there is already the "this field is required error"
+            pass
+        else: 
+            # other fields need an error
+            values = [source, swahili_definition,sentence,construction,part_of_speech]
+            # add error for the empty fields
+            for value in values:
+                if value is None:
+                    self.add_error(value, ValidationError("Please enter a value (or N/A)"))
 
         # Always return the full cleaned_data dictionary from clean()
         return cleaned_data

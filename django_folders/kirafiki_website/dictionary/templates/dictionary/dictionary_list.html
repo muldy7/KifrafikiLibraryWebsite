@@ -3,6 +3,13 @@
 {% block content %}
 <h1>Kiswahili Dictionary</h1>
 
+<!-- Search Bar Form -->
+ <!-- can put this style stuff in css later and change the class -->
+<form method="GET" action="" style="display: inline-flex; align-items: center; gap: 5px;">
+    <input type="text" name="q" placeholder="Search the dictionary..." value="{{ request.GET.q }}">
+    <button type="submit">Search</button>
+</form>
+
 <ul class="entry-list">
   {% for entry in dictionary_list %}
     <li>
@@ -12,7 +19,8 @@
       <span class="pos">({{ entry.part_of_speech }})</span>
     </li>
   {% empty %}
-    <li>No entries yet.</li>
+    <!-- i could change this so that if there are no entries its a different message but when will that happen -->
+    <li>No entries found matching your search.</li>
   {% endfor %}
 </ul>
 

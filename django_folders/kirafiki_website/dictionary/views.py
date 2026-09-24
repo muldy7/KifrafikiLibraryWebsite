@@ -5,6 +5,8 @@ from .services import translate_word, letter_counter # from services.py file for
 from .models import DictionaryEntry
 from django.contrib.auth.mixins import LoginRequiredMixin
 import re
+from django.db.models import Q # used for filtering
+from django.db.models import Case, When, Value, IntegerField    # for ordering the formset
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.forms import modelformset_factory
@@ -27,7 +29,23 @@ class DictionaryListView(ListView):
     context_object_name = "dictionary_list"
     paginate_by = 25
     ordering = ["swahili_entry"] # order alphabetically 
- 
+
+    # add a query site for searching on the site
+    def get_queryset(self):
+        # 1. Start with the base queryset
+        queryset = super().get_queryset() 
+        
+        # 2. Get the search query from the GET parameters (default to empty string)
+        query = self.request.GET.get('q', '') 
+        
+        # 3. If a search term exists, filter the queryset
+        if query:
+            queryset = queryset.filter(
+                Q(swahili_entry__icontains=query) | Q(english__icontains=query)
+            )
+            
+        return queryset
+    
 # just copied this over from from views in site_content since it's super similar 
 # this page REQUIRES LOGIN
 class DictionaryDetailView(DetailView):
@@ -108,7 +126,7 @@ def extract_unique_words(text):
     seen = set()
     unique_words = [] # need a list of words that are new to the database
     for word in words:
-        if allowed_character in word:
+        if allowed_character in word: # this might be redundant now i'm not sure
             word = word.replace(allowed_character," ") # look for dollar sign and replace with a space since its a compound phrase
         if word not in seen:    # continue to see if we know the word
             seen.add(word)
@@ -126,7 +144,7 @@ def add_content_view(request):
     characters_required sets the amount of characters a user must submit to have a valid story
     """
     # create the formset
-    DictionaryEntryFormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=3,  can_delete=True)
+    DictionaryEntryFormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=0,  can_delete=True)
  
     stage = request.POST.get("stage")
     characters_required = 5 # <----- this sets the amount of characters a user must enter when they write a story, maybe this can be a global variable somehow
@@ -146,7 +164,7 @@ def add_content_view(request):
 
         # make a count pass flag
         count_flag = 0 # flag to see if we pass both count tests
-
+        
         # if the count is too low we should have them enter more words
         if letter_count < characters_required:
             messages.error(request, f"Error: Please write an entry of at least {characters_required} characters")
@@ -188,26 +206,38 @@ def add_content_view(request):
             # do everything else
             # think I have to add a step here just in case it doesn't work
             unique_words = extract_unique_words(content_body)
-    
-            # Which of these words already exist in the dictionary?
-            existing_entries = DictionaryEntry.objects.filter(swahili_entry__in=unique_words)
-            existing_words = set(existing_entries.values_list("swahili_entry", flat=True)) # the string has to match field name in the model
-    
-            # Any word not already in the database needs a brand-new blank form.
+
+            # need to add code to make sure the words stay in the same order as the story
+            word_order_case = Case(
+                *[When(swahili_entry=word, then=Value(idx)) for idx, word in enumerate(unique_words)],
+                default=Value(len(unique_words)),
+                output_field=IntegerField(),
+            )
+
+            existing_entries = (
+                DictionaryEntry.objects
+                .filter(swahili_entry__in=unique_words)
+                .order_by(word_order_case)
+            )
+
+            existing_words = set(existing_entries.values_list("swahili_entry", flat=True))
             new_words = [w for w in unique_words if w not in existing_words]
-    
-            # Build a formset sized for exactly the new words we need to add,
-            # on top of one form per existing word (from the queryset).
+
             FormSet = modelformset_factory(DictionaryEntry, form=DictionaryEntryForm, extra=len(new_words))
             formset = FormSet(
                 queryset=existing_entries,
                 initial=[{"swahili_entry": w} for w in new_words],
             )
 
+            # remake the form so it is ordered and not random/based on pk
+            form_by_word = {form.initial.get("swahili_entry"): form for form in formset.forms}
+            ordered_forms = [form_by_word[w] for w in unique_words if w in form_by_word]
+
             # would be good to add a field here so I can add the source and level
             # like not asking the AI for everything and then I have to figure stuff out 
             return render(request, "dictionary/add_content_words.html", { # where the view is using the template to render the html
                 "formset": formset,
+                "ordered_forms": ordered_forms,
                 "content_title": content_title, # like using content for now since maybe I'll have articles and other stuff in the future but people can help me with that 
                 "content_body": content_body,
                 "content_source": content_source,
@@ -225,18 +255,26 @@ def add_content_view(request):
         # going to check and make sure we can save here. Don't need to do a whole form or anything too complicated
         
         # Bind submitted data to the main FormSet template
+        # make a copy of the post data so we can change it when there's a partial save
+        #data = request.POST.copy()
+
         formset = DictionaryEntryFormSet(request.POST, queryset=DictionaryEntry.objects.all())
- 
+        #print(formset)
+
+        # add code to allow partial saves
+        saved_pks = [] # save the primary keys of the ones that get saved
+        unresolved_initial = [] # place the ones that don't get saved
+        all_valid = True # see if all the forms were saved correctly
+
         for form in formset.forms:
         # Step A: Loop through the individual forms to attach meta user info
             # Check if the form actually has data (skips empty extra forms)
             if form.has_changed():
                 if form.is_valid():
                     # Extract the database instance object without saving it yet
-                    entry = form.save(commit=False)
-
-                    # this is so we can combine compound words or phrases for our dictionary. 
-                     # Check if this specific entry is brand new (no primary key yet)
+                    entry = form.save(commit=False) # have to change this since we allow partial saves
+    
+                    # Check if this specific entry is brand new (no primary key yet)
                     if entry.pk is None:
                         entry.user_added = request.user # since I have custom user this may fail later
                         entry.date_added = timezone.now()
@@ -247,17 +285,49 @@ def add_content_view(request):
 
                     # Save this individual record to the database safely
                     entry.save()
+
+                    # add the saved pk to the list
+                    saved_pks.append(entry.pk)
+                   
                 else:
+                    # set all_valid to false if a word saved badly
+                    all_valid = False
+
+                    # make sure the pk is still added to the list even if it's an existing entry
+                    # have to use form.instance since it can't save
+                    if form.instance and form.instance.pk:
+                        saved_pks.append(form.instance.pk)
+
                     # see whatever swahili word there is an error for (can add line number later)
-                    swahili_entry = form.add_prefix('swahili_entry')
-                    swahili_word = request.POST.get(swahili_entry, "Unknown Word")
+                    swahili_word = request.POST.get(form.add_prefix('swahili_entry'))
+                   
                     for field, errors in form.errors.items(): # this has to be "formset" and not "forms"
                         for error in errors:
                         # going to get error and the field name for the error
                             messages.error(request, f"Error '{swahili_word}' ({field.title()}): {error}")
 
+                    # keep what the user typed so we can re-show it
+                    # but skip if its an existing value
+                    if form.instance and form.instance.pk:
+                        saved_pks.append(form.instance.pk)
+                    else:
+                        unresolved_initial.append({
+                            "swahili_entry": request.POST.get(form.add_prefix("swahili_entry"), ""),
+                            "english": request.POST.get(form.add_prefix("english"), ""),
+                            "part_of_speech": request.POST.get(form.add_prefix("part_of_speech"), ""),
+                            "swahili_definition": request.POST.get(form.add_prefix("swahili_definition"), ""),
+                            "sentence": request.POST.get(form.add_prefix("sentence"), ""),
+                            "construction": request.POST.get(form.add_prefix("construction"), ""),
+                            "translation_source": request.POST.get(form.add_prefix("translation_source"), ""),
+                        })
+
+            # still want to save the words even if they haven't been changed on a partial save
+            else:
+                entry = form.save(commit=False)
+                saved_pks.append(entry.pk)
+
         # only save the content if the entire formset is valid
-        if formset.is_valid():
+        if all_valid:
             # Step B: Handle any items flagged for deletion safely outside the loop
             if formset.can_delete:
                 formset.save(commit=False) 
@@ -284,15 +354,30 @@ def add_content_view(request):
             return redirect("site_content:content-list")  # adjust to your actual URL name
             # need an error if first step isn't valid
         else:
-        # If the formset had errors, re-render step 2 with error messaging
+            # make a new formset if it's a partial save
+            RetryFormSet = modelformset_factory(
+                DictionaryEntry, form=DictionaryEntryForm,
+                extra=len(unresolved_initial), can_delete=True
+            )
+
+            retry_qs = DictionaryEntry.objects.filter(pk__in=saved_pks)
+            formset = RetryFormSet(queryset=retry_qs, initial=unresolved_initial)
+
+            # rebuild the story-order sequence the same way as stage 1,
+            # since this formset is a fresh object 
+            unique_words = extract_unique_words(content_body)
+            form_by_word = {form.initial.get("swahili_entry"): form for form in formset.forms}
+            ordered_forms = [form_by_word[w] for w in unique_words if w in form_by_word]
+
             return render(request, "dictionary/add_content_words.html", {
                 "formset": formset,
+                "ordered_forms": ordered_forms,
                 "content_title": content_title,
                 "content_body": content_body,
                 "content_source": content_source,
-                "content_level": content_level, 
+                "content_level": content_level,
             })
-    
+            
     else:
         # If it's a POST request but stage is missing/blank, it's our edit redirect button!
         # this is because we redirected back to stage 1 from stage 2

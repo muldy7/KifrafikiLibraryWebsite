@@ -87,7 +87,10 @@ toggleButtons.forEach(function(button) {
     button.addEventListener("click", async function() {
         // get the word from the button and replace any punctuation
         // this whill be a place where it may get messed up with other languages. 
-        const clickedWord = this.getAttribute("data-word").replace(/[^a-zA-Z0-9\s]/g, "");
+        // use let since it is changing
+        let clickedWord = this.getAttribute("data-word")
+        clickedWord = clickedWord.replace("$", " ");
+        clickedWord = clickedWord.replace(/[^a-zA-Z0-9\s]/g, "");
         
         // call the function to get the stuff from the database
         // have to use try or it won't work

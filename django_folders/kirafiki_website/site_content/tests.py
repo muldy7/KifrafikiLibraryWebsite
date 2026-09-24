@@ -6,6 +6,7 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from dictionary.tests import create_basic_entry # this is used for testing reader view
+
 # basic functions to use for testing
 def create_content(title):
     """
@@ -15,6 +16,20 @@ def create_content(title):
     return Content.objects.create(
         title= title, 
         content="test test", 
+        level = "B", 
+        source = "source not found", 
+        pub_date = timezone.now() + datetime.timedelta(days=-5),
+        last_modified = timezone.now(),
+        )
+
+def create_content_with_body(title, body):
+    """
+    This function creates a basic content entry to the database if you want to write the body as well
+
+    """
+    return Content.objects.create(
+        title= title, 
+        content=body, 
         level = "B", 
         source = "source not found", 
         pub_date = timezone.now() + datetime.timedelta(days=-5),
@@ -104,7 +119,19 @@ class ContentModelTests(TestCase):
 
     # I can add tests for case and punctuation but I feel like that's okay for the titles to have
 
-class DictionaryEntryUserTests(TestCase):
+    def test_dollar_sign_detail_view(self):
+            """
+            Test to see if the dollar sign is removed if used to combine words.
+            If a dollar sign is used to combin words it will be stored in the database so it is sent to reader view 
+            as one word but it shouldn't be shown to the user. It will be seen in the detail view for now. 
+            """
+            test_entry = create_content_with_body("test entry","dollar$sign")
+            response = self.client.get(reverse("site_content:content-detail", kwargs={"slug": test_entry.slug}))
+            self.assertEqual(response.status_code, 200)
+            self.assertNotContains(response, "dollar sign")
+    
+
+class ContentUserTests(TestCase):
     """
     This test class is for all tests that require a user login 
     This class uses the built in setUpTestData() function to increase the speed of the tests
@@ -337,7 +364,7 @@ class DictionaryEntryUserTests(TestCase):
         response = self.client.post(url, data = form_data)
         self.assertEqual(response.status_code, 200) # make sure it was the change was denied
 
-class DictionaryEntryAnonymousUserTests(TestCase):
+class ContentAnonymousUserTests(TestCase):
     """
     Tests to be done if there is no user logged in
     """
@@ -428,3 +455,14 @@ class ReaderViewTests(TestCase):
             # 4. Check the JSON payload data
             json_data = response.json()
             self.assertEqual(json_data["success"], False) # make sure the function call was unsuccessful
+
+    def test_dollar_sign_detail_view(self):
+        """
+        Test to see if the dollar sign is removed if used to combine words.
+        If a dollar sign is used to combin words it will be stored in the database so it is sent to reader view 
+        as one word but it shouldn't be shown to the user. 
+        """
+        test_entry = create_content_with_body("test entry","dollar$sign")
+        response = self.client.get(reverse("site_content:reader-view", kwargs={"slug": test_entry.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "dollar sign")

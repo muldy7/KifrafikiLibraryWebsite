@@ -65,7 +65,7 @@ def formset_post_data(formset, rows, **extra):
     This function creates a post data for the second stage of the content tool since it is required that 
     we retain the data from the first stage
     We need to do this function to deal with parts of the formset that are required for submission
-    These are normally hidden to the user but required for testing
+    These are normally hidden to the user but required for testing. Have to give te formset the hidden id field as well.
     """
     mf = formset.management_form
     data = {
@@ -77,7 +77,14 @@ def formset_post_data(formset, rows, **extra):
     for i, row in enumerate(rows):
         for name, value in row.items():
             data[f"form-{i}-{name}"] = value
-        data.setdefault(f"form-{i}-id", "")
+
+        # carry over the real pk for forms that already exist in the formset,
+        # so the server recognizes this as an update, not a new row
+        if i < len(formset.forms) and formset.forms[i].instance.pk:
+            data[f"form-{i}-id"] = formset.forms[i].instance.pk
+        else:
+            data.setdefault(f"form-{i}-id", "")
+
     data.update(extra)
     return data
 
@@ -149,7 +156,7 @@ class DictionaryEntryModelTests(TestCase):
         """
         response = self.client.get(reverse("dictionary:dictionary-list"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No entries yet.")
+        self.assertContains(response, "No entries found matching your search.")
 
     def test_detail_page(self):
         """
@@ -678,9 +685,10 @@ class ContentEntryToolTests(TestCase):
         This test performs a basic test of the translation tool function sinc ethe function of the button uses
         website based JavaScript and it can't be tested with python
         """
-        #translated_word = lookup_word("sitaki") # using the translation function
+        #translated_word = lookup_word("kwa") # using the translation function
         #self.assertIn("No examples found",translated_word)
         # I'll really have to understad how this button works if i want the edit button to work
+        # better to test this manually since I don't want to use up my api credits
 
     def test_two_stage_save(self):
         """
@@ -935,8 +943,162 @@ class ContentEntryToolTests(TestCase):
         # make sure that the reponse contains the phrase without a space
         self.assertContains(response_1, "alikuwa akiandika") 
 
+
+    def test_save_after_error(self):
+        """
+        This test ensures that when we save with the content tool it should bring us a partial save where some words are saved in the database
+        but the full content itself is not saved. Then if we have a successful save there should be no errors 
+        """
+
+        url = reverse("dictionary:add-content")
+
+        # TEST TWO BAD VALUES
+        # ---- stage 1 ----
+        response_1 = self.client.post(url, {
+            "stage": "submit_text",
+            "content_title": "test",
+            "content_body": "sitaki chakula",
+            "content_source": "my head",
+            "content_level": "B",     
+        })
+
+        # ---- stage 2 ----
+        formset = response_1.context["formset"] # save the formset from round one
+
+        # create a full row of data for the form 
+        r1 = create_basic_form_data("sitaki","new english definition") # row 1
+        r2 = create_basic_form_data("chakula", "") # save a bad value for chakula
+         
+        data = formset_post_data(
+            formset,
+            rows=[
+                r1,
+                r2,
+            ],
+            stage="save_content",   # include the same data from the first round
+            content_title="test",
+            content_body="sitaki chakula",
+            content_source="my head",
+            content_level="B",
+        )
+
+        response_2 = self.client.post(url, data) # post to the second stage of the view
+       
+        self.assertEqual(response_2.status_code, 200) # should not redirect
+        self.assertFalse(Content.objects.filter(title="test").exists()) # this shouldnt save
+        self.assertFalse(DictionaryEntry.objects.filter(swahili_entry="chakula").exists()) # this as well
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="sitaki").exists()) # sitaki should be valid and save
+
+        # test again but with a successful save
+        # get the new formset 
+        formset = response_2.context["formset"]
+
+        # create a full row of data for the form 
+        r3 = create_basic_form_data("sitaki","new english definition") # row 1
+        r4 = create_basic_form_data("chakula", "this time it should work") # save a bad value for chakula
+            
+        data_2 = formset_post_data(
+            formset,
+            rows=[
+                r3,
+                r4,
+            ],
+            stage="save_content",   # include the same data from the first round
+            content_title="test",
+            content_body="sitaki chakula",
+            content_source="my head",
+            content_level="B",
+        )
+
+        response_3 = self.client.post(url, data_2) # post to the second stage of the view
+        #self.assertContains(response_3, "goo goo gaga")
+        self.assertEqual(response_3.status_code, 302) # should redirect
+        self.assertTrue(Content.objects.filter(title="test").exists()) # this should save
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="chakula").exists()) # this as well
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="sitaki").exists()) # sitaki should be valid and save
+
+
+    def test_bad_values_on_existing_entry(self):
+        """
+        If a user deletes a field on an existing object in the and doesn't write anything the original value should just be put back
+        """
+        # get the url
+        url = reverse("dictionary:add-content")
+
+        # make an existing entry
+        test_entry = create_basic_entry("sitaki")
+
+        # ---- stage 1 ----
+        response_1 = self.client.post(url, {
+            "stage": "submit_text",
+            "content_title": "test",
+            "content_body": "sitaki chakula",
+            "content_source": "my head",
+            "content_level": "B",     
+        })
+
+        # ---- stage 2 ----
+        formset = response_1.context["formset"] # save the formset from round one
+
+        # create a full row of data for the form 
+        r1 = create_basic_form_data("sitaki","") # give a blank value to row 1
+        r2 = create_basic_form_data("chakula", "new definition") # save a bad value for chakula
         
-        
+        data = formset_post_data(
+            formset,
+            rows=[
+                r1,
+                r2,
+            ],
+            stage="save_content",   # include the same data from the first round
+            content_title="test",
+            content_body="sitaki chakula",
+            content_source="my head",
+            content_level="B",
+        )
+
+        response_2 = self.client.post(url, data) # post to the second stage of the view
+        test_entry.refresh_from_db() # refresh the object
+    
+        self.assertEqual(response_2.status_code, 200) # should not redirect
+        self.assertFalse(Content.objects.filter(title="test").exists()) # this shouldnt save
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="chakula").exists()) # this ashould still exist
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="sitaki").exists()) # sitaki should be valid and save
+        self.assertContains(response_2, "default") # default definition for the entry
+        self.assertEqual(test_entry.english, "default") # make extra sure it didn't change
+
+        # if we try to save now it should work
+        formset = response_2.context["formset"] # get the form set 
+
+        # create a full row of data for the form 
+        r3 = create_basic_form_data("sitaki","new english definition") # row 1
+        r4 = create_basic_form_data("chakula", "this time it should work") # save a bad value for chakula
+            
+        data_2 = formset_post_data(
+            formset,
+            rows=[
+                r3,
+                r4,
+            ],
+            stage="save_content",   # include the same data from the first round
+            content_title="test",
+            content_body="sitaki chakula",
+            content_source="my head",
+            content_level="B",
+        )
+
+        response_3 = self.client.post(url, data_2) # post to the second stage of the view
+
+        # update the db object
+        test_entry.refresh_from_db()
+
+        #self.assertContains(response_3, "goo goo gaga")
+        self.assertEqual(response_3.status_code, 302) # should redirect
+        self.assertTrue(Content.objects.filter(title="test").exists()) # this should save
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="chakula").exists()) # this as well
+        self.assertTrue(DictionaryEntry.objects.filter(swahili_entry="sitaki").exists()) # sitaki should be valid and save
+        self.assertNotEqual(test_entry.english, "default") # definiiton should be different now
+
 
 # can make a test to make sure the definition changes if we change it
 # I might want to add a "add new word" later but I think if I do a huge upload it will be okay

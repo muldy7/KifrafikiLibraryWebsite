@@ -6,21 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
     <!-- <link rel="stylesheet" href="{%static 'global.css'%}"> -->
-    <title>{% block title %}Kirafiki Swahili Learning{% endblock %}</title>
+    <title>{% block title %}The Kirafiki Library{% endblock %}</title>
     <!-- Link your CSS stylesheets here -->
 </head>
 <body>
 
     <!-- Shared Navigation Navbar -->
     <!-- easy to add stuff to the navigation bar with just their basic link -->
-    <nav>
-        <a href="/">Home</a> | 
-        <a href="/site_content/">Articles</a> | 
-        <a href="/dictionary/">Dictionary</a> | 
-        <a href="/dictionary/add-content/">Add Content Tool</a> | 
-        <a href="/my-vocabulary/">My Vocabulary List</a> |
-        <a href="/accounts/login/">Login</a> 
-        
+    <nav class="navbar">
+    <!-- Left Side: Main Navigation Links -->
+    <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/site_content/">Articles</a></li>
+        <li><a href="/dictionary/">Dictionary</a></li>
+        <li><a href="/dictionary/add-content/">Add Content Tool</a></li>
+        <li><a href="/my-vocabulary/">My Vocabulary List</a></li>
+    </ul>
+
+    <!-- Right Side: User Authentication Stuff -->
+    <div class="nav-auth">
+        {% if user.is_authenticated %}
+        <span class="welcome-msg">Karibu, {{ user.username }}!</span>
+        <form action="{% url 'logout' %}" method="post" class="logout-form">
+            {% csrf_token %}
+            <button type="submit" class="logout-btn">Log Out</button>
+        </form>
+        {% else %}
+        <a href="{% url 'login' %}" class="login-btn">Log In</a>
+        {% endif %}
+    </div>
     </nav>
 
     <!-- MESSAGES WILL GO HERE -->
@@ -52,3 +66,80 @@
     <!-- Link your JavaScript files here -->
 </body>
 </html>
+
+<style>
+/* this is some good style stuff that sarah can help with! */
+/* Base navbar layout */
+.navbar {
+  display: flex;
+  justify-content: space-between; 
+  align-items: center;
+}
+
+/* Horizontal list for navigation links */
+.nav-links {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 16px; /* Space between links */
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #0084ff;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  color: #007bff; /* Turns blue on hover */
+}
+
+/* User authentication section alignment */
+.nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.welcome-msg {
+  font-weight: 500;
+  color: #b5b5b3;
+}
+
+/* Styling the buttons to look clean and intentional */
+.logout-form {
+  margin: 0;
+}
+
+.logout-btn, .login-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.logout-btn {
+  background: none;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+}
+
+.logout-btn:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+.login-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+}
+
+.login-btn:hover {
+  background-color: #0056b3;
+}
+
+
+</style>

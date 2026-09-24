@@ -309,7 +309,7 @@ deepl_client = deepl.DeepLClient(auth_key)
 # text needs to be input as clean text
 def simple_translate(text):
     """
-    This function tries different apis to get a translation
+    This function tries different apis to get a translation. It will output a tuple of the definition and the source. 
     """
 
     try:
@@ -355,9 +355,10 @@ def example_translate(list):
     for example in list:
         #time.sleep(0.3)
         if examples != "":
-            examples = examples + '; ' + example + ' = ' + simple_translate(example) # make a longer list
+
+            examples = examples + '; ' + example + ' = ' + simple_translate(example)[0] # make a longer list
         else:
-            examples = example + ' = ' + simple_translate(example) # translate the example and add it to the list
+            examples = example + ' = ' + simple_translate(example)[0] # translate the example and add it to the list, simple translate outputs a tuple
 
     return examples 
 
@@ -461,7 +462,7 @@ if __name__ == "__main__":
     # test the translate word function
     # new_entry = translate_word("mbuzi") # mbuzi should only output one part of speech even though it has different definitions
     # #new_entry = translate_word("ng'ombe") # ng'ombe works fine with the apostrephe this entry has a lot of examples too 
-    new_entry = translate_word("sitaki")
+    new_entry = translate_word("kwa")
     print(new_entry)
     print(new_entry["swahili_entry"])
     example = new_entry['sentence']

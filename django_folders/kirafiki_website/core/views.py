@@ -16,7 +16,7 @@ def about_view(request):
     # can add more stuff here later if I want to
     context = {
         'project_name': 'The Kirafiki Library',
-        'version_num': '0.1'
+        'version_num': '0.1.1'
     }
     return render(request, 'core/about.html', context)
 
@@ -24,7 +24,7 @@ def home_view(request):
 
     context = {
         'project_name': 'The Kirafiki Library',
-        'version_num': '0.1.0'
+        'version_num': '0.1.1'
     }
     return render(request, 'core/home.html', context)
 

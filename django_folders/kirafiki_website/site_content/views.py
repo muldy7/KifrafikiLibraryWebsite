@@ -84,7 +84,8 @@ def reader_view(request,slug): # <---- can give the view the slug and then it ca
     #words = content.content.split()
     content_body = content.content # a little confusing since the name is the same haha
     paragraphs = content_body.split('\n\n')
-    
+
+    # create the structured content and set any '$' as one word
     structured_content = []
     for para in paragraphs:
         # split each paragraph into lines by single newlines
@@ -93,7 +94,14 @@ def reader_view(request,slug): # <---- can give the view the slug and then it ca
         for line in lines:
             # split lines into individual words
             words = line.split()
-            para_lines.append(words)
+            line_words = []
+            for word in words:
+                #print(word)
+                if "$" in word:
+                    word = word.replace('$',' ') # have to set it equal otherwise it doesnt change
+                    #print(word)
+                line_words.append(word)
+            para_lines.append(line_words)
         structured_content.append(para_lines)
 
     # create context for the view
@@ -143,3 +151,6 @@ def fetch_database_entry(response,word):
             }, 
             status=404
         )
+
+
+

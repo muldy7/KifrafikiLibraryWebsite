@@ -24,7 +24,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for form in formset %}
+            {% for form in ordered_forms %}
                 <tr>
                     {% for hidden in form.hidden_fields %}
                         {{ hidden }}
