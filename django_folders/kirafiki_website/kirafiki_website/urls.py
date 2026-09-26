@@ -28,6 +28,7 @@ urlpatterns = [
     path('', include('core.urls')),
     path('my-vocabulary/',include('vocabulary.urls')), # want to change this later
     path('logout/', LogoutView.as_view(), name='logout'),
+    path("ckeditor5/", include("django_ckeditor_5.urls")),
 ]
 
 

@@ -5,6 +5,8 @@ from django.contrib.messages.views import SuccessMessageMixin
 from .models import BugReport
 from django.urls import reverse_lazy, reverse
 from .forms import BugReportForm
+import os
+from dotenv import load_dotenv
 
 
 # simple views for different parts of my core website like about and home
@@ -12,11 +14,22 @@ from .forms import BugReportForm
 # if something doesn't have a home it can go in core
 # these guys are lower case since they are functions
 
+# get the version number from the local environment or from render
+# I WILL HAVE TO CHANGE THIS IF I SWITCH TO PYTHON ANYWHERE
+
+load_dotenv()
+# load deepl api for translation
+version_num = os.getenv("VERSION_NUM") # replace with your key
+
+# check if the auth_key is stored on the render environment
+if ValueError == None or version_num == "":
+    version_num = os.environ.get("API_KEY")
+
 def about_view(request):
     # can add more stuff here later if I want to
     context = {
         'project_name': 'The Kirafiki Library',
-        'version_num': '0.1.1'
+        'version_num': version_num
     }
     return render(request, 'core/about.html', context)
 
@@ -24,7 +37,7 @@ def home_view(request):
 
     context = {
         'project_name': 'The Kirafiki Library',
-        'version_num': '0.1.1'
+        'version_num': version_num
     }
     return render(request, 'core/home.html', context)
 

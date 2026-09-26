@@ -3,6 +3,7 @@ from dictionary.models import DictionaryEntry
 from accounts.models import CustomUser
 from django.utils.text import slugify
 from django.utils import timezone
+from site_content.models import Content
 
 # going to Keep It Simple Stupid and not try too hard here 
 # Create your models here.
@@ -38,11 +39,16 @@ class ListAddition(models.Model):
     # This field records when the connection was made
     added_at = models.DateTimeField(default=timezone.now) # this will not when the vocab word is added
 
+    # don't think I can always do foreign key because someone may added it from the dictionary?
+    added_from = models.ForeignKey(Content, on_delete=models.CASCADE, null=True, blank=True) # okay I'm not super sure what this does but it's okay
+    #added_from = models.CharField(max_length=200, blank=True, default="Added from Dictionary")
+
     # have a better name for the object
     def __str__(self):
         return f"{self.vocab_list}: {self.word}"
     
 
 # at some point I can add the article this came from so it can link back to that
-
+# if I make a migration that causes an error sometimes I have to go back and delete it
+# the first time I tried to do it without null = True messed it up
 # I can make sure they have a vocabulary list when they make an account

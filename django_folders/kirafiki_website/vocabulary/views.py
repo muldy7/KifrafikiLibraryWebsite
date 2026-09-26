@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from dictionary.models import DictionaryEntry
+from site_content.models import Content
 from .models import VocabularyList, ListAddition
 from django.utils import timezone
 from django.contrib import messages
@@ -56,12 +57,37 @@ def add_vocabulary_word(request,word):
         # see if the user has a list already or not
         vocab_list, created = VocabularyList.objects.get_or_create(owner=request.user) # created is a False or True if it was created
 
+        # get the story that the word was added from if it was added from reader view
+        # can get the previous url from the request metadata
+        url = request.META.get('HTTP_REFERER', '/default-fallback-path/') # better to do this in case a user is browsing from private or blocking meta data
+        # url = request.META['HTTP_REFERER']
+
+        # see if the url is coming from "reader-view"
+        if "reader-view" in url:
+            # strip the url at the '/' to find the name of the article
+            parts = url.strip('/').split('/')
+
+            # test to make sure "highlight" wasnt in the url
+            # might be a better way to do this but oh well thats why we have test
+            if "highlight" in url:
+                slug = parts[-3]
+            else:
+            # the slug will be in the second part 
+                slug = parts[-2] 
+
+            #print(slug)
+            # use the slug to get the oorrect content the request is coming from
+            added_from = Content.objects.get(slug=slug)
+        else:
+            added_from = None # set to null if added from dictionary
+
         if not ListAddition.objects.filter(vocab_list=vocab_list, word = vocab_word).exists(): # this returns true or false
             # add the word to the list if it doesn't already exist
             ListAddition.objects.create(
                     word = vocab_word, # this just takes the whole thing
                     vocab_list = vocab_list, 
-                    added_at=timezone.now()
+                    added_at=timezone.now(),
+                    added_from = added_from # think I can just get this from the request but we will check, stored as text
                     )
         else:
             # if the word is already in the list
@@ -95,6 +121,7 @@ class UserVocabularyListView(LoginRequiredMixin, ListView):
             .filter(vocab_list=vocab_list)
             .select_related('word') # from the vocabulary model
             .order_by('-added_at') # sorting by words gets messed up if nothing is in the vocab list
+
         )
 
 # delete view class from the django documentation

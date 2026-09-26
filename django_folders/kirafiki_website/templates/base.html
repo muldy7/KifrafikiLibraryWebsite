@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
     <!-- <link rel="stylesheet" href="{%static 'global.css'%}"> -->
     <title>{% block title %}The Kirafiki Library{% endblock %}</title>
+
+    <!-- add a header block to the file -->
+    {% block header %}{% endblock %}
     <!-- Link your CSS stylesheets here -->
 </head>
 <body>
@@ -139,6 +142,12 @@
 
 .login-btn:hover {
   background-color: #0056b3;
+}
+
+/* make it so the content entry block is visible */
+.ck-content, .ck-content * {
+    color: initial;
+    background-color: initial;
 }
 
 

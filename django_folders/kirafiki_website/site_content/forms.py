@@ -1,8 +1,9 @@
 from django import forms
-from .models import Content
+from .models import Content, Lesson
 from dictionary.services import letter_counter
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
+from django_ckeditor_5.widgets import CKEditor5Widget # for the form to work
 
 
 # this form is for the basic entry form for changing our story's content 
@@ -72,3 +73,55 @@ class ContentUpdateForm(forms.ModelForm):
         
         # 3. Inject the options into the form instance metadata
         #self.fields['translation_source'].choices_list = dropdown_suggestions
+
+class LessonUpdateForm(forms.ModelForm):
+    """
+    Form for updating the lesson
+    ModelForm automatically builds form fields that match the model fields
+    listed in Meta.fields, and knows how to save() directly to that model.
+    """
+
+    class Meta:
+        model = Lesson
+        fields = ["body"]
+
+        widgets = {
+              "body": CKEditor5Widget(
+                  attrs={"class": "django_ckeditor_5"}, config_name="extends"
+              )
+          }
+
+    def clean(self):
+        # get the cleaned data for each time the form is saved
+        cleaned_data = super().clean()
+
+        #print(cleaned_data)
+        # grab values for testing
+        body = cleaned_data.get('body') # the body of the article, maybe I change this name later but too late
+
+        if body is None:
+            # go back if nothing was submited
+            return cleaned_data
+
+        # if body exists
+        else:
+            # there should be at least two characters in the word
+            characters_required = 2
+
+            # count the letters in the english definition
+            letter_count_body = letter_counter(body)
+
+            # return an error in case any of them are empty strings
+            if letter_count_body < characters_required:
+                # we need to submit a bad form
+                self.add_error('body', ValidationError("Please submit a valid text"))
+
+            # get the hell out of here if there's an error and we don't need to finish
+            if self.errors:
+                return cleaned_data
+
+        # FIX 3: Always return the full cleaned_data dictionary from clean()
+        return cleaned_data
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

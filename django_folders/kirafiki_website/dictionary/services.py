@@ -9,12 +9,13 @@ from django.views import generic
 from django.utils import timezone 
 from deep_translator import GoogleTranslator, MyMemoryTranslator, DeeplTranslator
 import string 
+import pathlib
 import requests
 import re
 import deepl
 import time
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv # for the DeepL API
 
 #from .models import DictionaryEntry
 
@@ -23,7 +24,6 @@ from dotenv import load_dotenv
 
 # I think for the view I'll want to have a question that is like "Detected new word, would you like to add to the database?" idk something like that. but this translation tool is free and easy to do 
 # so I want to set it up just idk where I'll use it 
-
 
 # FUNCTION #1 Free API Call
 ## function to look up with with the free dictionary api
@@ -37,6 +37,8 @@ from dotenv import load_dotenv
 # https://docs.python.org/3/library/re.html
 # https://www.deepl.com/en/your-account/keys
 # https://pypi.org/project/deep-translator/
+# https://www.argosopentech.com/
+
 
 
 # function to import into my file
@@ -268,7 +270,6 @@ def lookup_word(word):
        return None
 
 
-
 # FUNCTION #2: translate word in database, if I want to use it later I'll have it but otherwise I can just get from the database
 
 # something to do with proper nouns
@@ -298,7 +299,7 @@ auth_key = os.getenv("API_KEY") # replace with your key
 
 # check if the auth_key is stored on the render environment
 if auth_key == None or auth_key == "":
-    os.environ.get("API_KEY")
+    auth_key = os.environ.get("API_KEY")
 
 deepl.http_client.min_connection_timeout = 5.0 # set the timeout 
 deepl.http_client.max_network_retries = 0 # stop it from trying a bunch behind the scenes
@@ -362,6 +363,8 @@ def example_translate(list):
 
     return examples 
 
+
+# MAIN TRANSLATION FUNCTION
 def translate_word(text):
     """
     This function puts everything together and is what is used on the website to translate words
@@ -467,6 +470,7 @@ if __name__ == "__main__":
     print(new_entry["swahili_entry"])
     example = new_entry['sentence']
     print(example)
+   
 
     # try sitaki and anataka
     # okay awesome that worked great

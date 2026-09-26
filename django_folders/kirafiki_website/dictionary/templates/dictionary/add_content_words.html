@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (userWantsToEdit) {
                 // If they click "Cancel" (Go Back), immediately trigger your redirect function
                 console.log("User opted to go back. Redirecting...");
-                redirectWithHiddenData();
+                redirectWithHiddenData(targetWord);
                 return; // Stop any further JavaScript execution on this page
             }
 
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // --- 4. SECURE DATA TRANSFER VIA COMPONENT GENERATION ---
-function redirectWithHiddenData() {
+function redirectWithHiddenData(targetWord) {
     const title = document.querySelector('input[name="content_title"]').value;
     const body = document.querySelector('input[name="content_body"]').value;
     const source = document.querySelector('input[name="content_source"]').value;
@@ -144,7 +144,9 @@ function redirectWithHiddenData() {
 
     const mapForm = document.createElement("form");
     mapForm.method = "POST";
-    mapForm.action = "/dictionary/add-content/";
+
+    // send the url back with the "highlight" encoded into the url"
+    mapForm.action = "/dictionary/add-content/?highlight=" + encodeURIComponent(targetWord);
     mapForm.style.display = "none";
 
     function createHiddenInput(name, value) {

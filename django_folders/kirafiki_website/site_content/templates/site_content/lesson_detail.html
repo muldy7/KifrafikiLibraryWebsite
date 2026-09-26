@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<article>
+    <h1>Lesson for: {{ lesson.content.title }}</h1>
+    <!-- need to use the function below instead of just the basic "content.level" because that is just stored as single letter -->
+
+    <div class="lesson-body">
+        {{ lesson.body|safe }}
+    </div>
+</article>
+<p></p>
+  <footer class="meta">
+    <p>Date modified: {{ object.last_edit }}</p>
+    <p>User modified: {{ object.user_edited }}</p>
+
+    <!-- links for the footer -->
+    <p><a href="{% url 'site_content:reader-view' slug=object.content.slug %}" class="button">Back</a> | <a href="{% url 'site_content:update-lesson' slug=object.slug %}" class="button">Edit Lesson</a></p>
+  </footer>
+
+{% endblock %}

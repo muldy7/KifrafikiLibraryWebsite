@@ -54,6 +54,11 @@
 </article>
 
 <footer class="meta">
+    {% if lesson %}
+        <a href="{% url 'site_content:lesson-detail' slug=lesson.slug %}" class="button">View Lesson</a>
+    {% else %}
+        <a href="{% url 'site_content:add-a-lesson' slug=slug %}" class="button">Add a Lesson</a>
+    {% endif %}
     <p>Last modified: {{ last_modified }}</p>
 
     <!-- see if we got a link or just text from the source (target = "_blank" means it will open in new tab)-->
@@ -79,6 +84,34 @@ const sidebarConstruction = document.getElementById("sidebarConstruction");
 const sidebarSentence = document.getElementById("sidebarSentence");
 const sidebarDefinition = document.getElementById("sidebarDefinition")
 
+// Highlight the word the user came here to look up from their vocab list
+const urlParams = new URLSearchParams(window.location.search);
+const highlightWord = urlParams.get("highlight");
+
+if (highlightWord) {
+    // same normalization as the click handler, so "kitabu," matches "kitabu"
+    const normalize = (str) => str
+        .replace("$", " ")
+        .replace(/[^a-zA-Z0-9\s]/g, "")
+        .toLowerCase()
+        .trim();
+
+    const target = normalize(highlightWord);
+
+    for (const btn of toggleButtons) {
+        if (normalize(btn.getAttribute("data-word")) === target) {
+            btn.classList.add("highlighted-word");
+            btn.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // remove the highlight after 5 seconds
+            setTimeout(() => {
+                btn.classList.remove("highlighted-word");
+            }, 5000);
+
+            break; // stop at the first occurrence
+        }
+    }
+}
 
 // Open sidebar
 // have to loop through every button
@@ -279,6 +312,15 @@ closeBtn.addEventListener("click", function() {
 footer p {
     font-size: 14px;
 }
+
+/* add a highlight to target text */
+.highlighted-word {
+    background-color: #008cff;
+    color: black;
+    border-radius: 3px;
+    padding: 0 2px;
+}
+
 </style>
 
 {% endblock %}

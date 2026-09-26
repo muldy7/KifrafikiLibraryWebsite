@@ -1,11 +1,12 @@
 from django.views.generic import ListView, DetailView
 from django.contrib.messages.views import SuccessMessageMixin
-from django.views.generic.edit import UpdateView, DeleteView
+from django.core.exceptions import ObjectDoesNotExist
+from django.views.generic.edit import UpdateView, DeleteView, CreateView
 from django.urls import reverse_lazy, reverse
-from .models import Content
+from .models import Content, Lesson
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .forms import ContentUpdateForm
+from .forms import ContentUpdateForm, LessonUpdateForm
 from django.shortcuts import render
 from django.http import JsonResponse
 from dictionary.models import DictionaryEntry
@@ -104,6 +105,12 @@ def reader_view(request,slug): # <---- can give the view the slug and then it ca
             para_lines.append(line_words)
         structured_content.append(para_lines)
 
+    # see if there is a lesson for the content have to use try incase it doesnt exist
+    try:
+        lesson = content.lesson
+    except ObjectDoesNotExist:
+        lesson = None
+
     # create context for the view
     context = {
         "structured_content": structured_content,
@@ -111,6 +118,8 @@ def reader_view(request,slug): # <---- can give the view the slug and then it ca
         "pub_date": content.pub_date,
         "title": content.title,
         "source": content.source,
+        "slug": content.slug,
+        "lesson": lesson,
         "last_modified": content.last_modified
                } # this is the context given to the website
 
@@ -152,5 +161,87 @@ def fetch_database_entry(response,word):
             status=404
         )
 
+"""
+VIEWS FOR LESSONS
+"""
+class LessonDetailView(DetailView):
+    """Shows a single story, looked up by its slug."""
+    model = Lesson # from the site_content model page
+    template_name = "site_content/lesson_detail.html"
+    context_object_name = "lesson" # this is then given to the template for it to use
+    slug_field = "slug"        # the model field to match against, this makes a human readble url instead of just the pk
+    slug_url_kwarg = "slug"    # the URL keyword argument name (must match urls.py below)
 
 
+class LessonUpdateView(SuccessMessageMixin,LoginRequiredMixin,UpdateView): # success message has to go to the left
+    model = Lesson
+    form_class = LessonUpdateForm
+    #fields = ["title", "content","level", "source"]
+    template_name_suffix = "_update_form"
+    success_message = "Lesson updated successfully"
+
+    def get_success_url(self):
+        # Extract the slug parameter from the current incoming URL
+        current_url_slug = self.kwargs.get('slug') # get slug from what is stored currently in the url
+
+        # find the link to return to after saving
+        return reverse("site_content:lesson-detail", kwargs={"slug": current_url_slug}) # this isn't going backwards but it uses the url name in url.py
+    
+    # have some stuff happen automatically to the form
+    # can do this even in class view
+    def form_valid(self, form):
+        # 1. Access the model instance attached to the form but don't commit to DB yet
+        if form.has_changed():
+            self.object = form.save(commit=False)
+
+            # get the correct content for the view from the kew word arguments
+            self.object.content = Content.objects.get(title=self.kwargs['slug'])
+
+            # 2. Inject your automatic data changes
+            self.object.last_edit = timezone.now() 
+            self.object.user_edited = self.request.user
+            # 3. Save the object to the database
+            self.object.save()
+        
+        # 4. Trigger standard redirection
+        return super().form_valid(form)
+
+class AddALesson(SuccessMessageMixin,LoginRequiredMixin, CreateView):
+    """
+    Generic view for uploading a bug report to the website, this will just be viewed in the admin panel
+    """
+    model = Lesson
+
+    # use a form for submitting the report
+    form_class = LessonUpdateForm
+    success_message = "Lesson added successfully. Thank you!"
+    template_name = "site_content/add_a_lesson.html"
+
+    def get_success_url(self):
+        current_url_slug = self.kwargs.get('slug')
+        
+        return reverse("site_content:lesson-detail", kwargs={"slug": current_url_slug})
+    
+    def form_valid(self, form):
+        # Set the user field of the model instance to the currently logged-in user
+        if form.has_changed():
+            self.object = form.save(commit=False)
+
+            # get the content from the request
+            self.object.content = Content.objects.get(slug=self.kwargs['slug'])
+
+            # 2. Inject your automatic data changes
+            self.object.last_edit = timezone.now() 
+            self.object.user_edited = self.request.user
+
+            # have to test if this already exists since add a view can mess things up
+            # good to know I can do this error and return slef.form_invalid 
+            if Lesson.objects.filter(content=self.object.content).exists():
+                form.add_error(None, "A lesson for this content already exists. Please go back.")
+                
+                return self.form_invalid(form)
+            # 3. Save the object to the database
+            self.object.save()
+        
+        # 4. Trigger standard redirection
+        return super().form_valid(form)

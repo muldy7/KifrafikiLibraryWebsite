@@ -1,5 +1,5 @@
 from django.test import TestCase
-from .models import Content
+from .models import Content, Lesson
 from django.utils import timezone
 from django.urls import reverse
 import datetime
@@ -307,9 +307,13 @@ class ContentUserTests(TestCase):
     # DELETE VIEW TEST
     def test_delete_view(self):
         """
-        Test to see if the delete view works as expected
+        Test to see if the delete view works as expected. 
+        The delete view should also delete a lesson as well if it was added to the content.
         """
         test_content = create_content("test") # test a word like ngombe using the past function so the date is in the past
+
+        # create a lesson to see if it deletes as well
+        test_lesson = Lesson.objects.create(content=test_content,body="test body",last_edit=timezone.now())
 
         # get url for the update entry page
         url = reverse("site_content:delete-content", kwargs={"slug": test_content.slug}) # including reverse in the url
@@ -325,6 +329,16 @@ class ContentUserTests(TestCase):
         # make sure the entry no longer exists
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404) # need to use status code oops
+
+        # make sure the lesson doesn't exist as well
+        lesson_url = reverse("site_content:lesson-detail", kwargs={"slug": test_lesson.slug})
+        
+        # the user should be able to view 
+        lesson_response = self.client.get(lesson_url)
+        
+        # user will shown the lesson page
+        self.assertEqual(lesson_response.status_code, 404)
+        self.assertFalse(Lesson.objects.filter(slug=test_lesson.slug).exists())
 
     def test_adding_bad_values(self):
         """
@@ -364,6 +378,169 @@ class ContentUserTests(TestCase):
         response = self.client.post(url, data = form_data)
         self.assertEqual(response.status_code, 200) # make sure it was the change was denied
 
+    def test_adding_lesson_successful(self):
+        """
+        Test a successful addition of a lesson
+        """
+        test_content = create_content("test") # make a entry that's to compare against
+
+        # see if the original reponse says "Add a Lesson" in reader view
+        content_url = reverse("site_content:reader-view", kwargs={"slug": test_content.slug})
+        rv_response = self.client.get(content_url)
+
+        # test for "Add a Lesson"
+        self.assertContains(rv_response, "Add a Lesson")
+
+        # get url for the add a lesson page
+        url = reverse("site_content:add-a-lesson", kwargs={"slug": test_content.slug}) # including reverse in the url
+        
+        # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
+        form_data = {
+            "body": "test body"
+        }
+
+        # add a lesson
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 302) 
+
+        # see if the new reponse says "View Lesson"
+        content_url = reverse("site_content:reader-view", kwargs={"slug": test_content.slug})
+        rv_response = self.client.get(content_url)
+
+        # test for "View Lesson"
+        self.assertContains(rv_response, "View Lesson")
+
+        # test the lesson detail
+        self.assertTrue(Lesson.objects.filter(body="test body").exists())
+
+    def test_adding_lesson_twice(self):
+        """
+        If a lesson is already added for a certain content we shouldnt be able to add it again. 
+        """
+        test_content = create_content("test") # make a entry that's to compare against
+
+        # get url for the add a lesson page
+        url = reverse("site_content:add-a-lesson", kwargs={"slug": test_content.slug}) # including reverse in the url
+        
+        # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
+        form_data = {
+            "body": "test body"
+        }
+
+        # add a lesson
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 302) 
+
+        # add a second lesson
+        # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
+        form_data = {
+            "body": "test number 2"
+        }
+
+        # add a lesson
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) # should not allow the form to be submitted
+        self.assertContains(response, "A lesson for this content already exists. Please go back.")
+
+        # test the lesson detail
+        self.assertTrue(Lesson.objects.filter(body="test body").exists())
+
+    def test_lesson_update(self):
+        """
+        Test to make sure the update lesson works as expected
+        """
+        test_content = create_content("test") # make a entry that's to compare against
+        
+        # get url for the add a lesson page
+        url = reverse("site_content:add-a-lesson", kwargs={"slug": test_content.slug}) # including reverse in the url
+        
+        # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
+        form_data = {
+            "body": "test body"
+        }
+
+        # add a lesson
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 302) 
+
+        # add a second lesson
+        # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
+        form_data = {
+            "body": "test number 2"
+        }
+
+        # get url for "update lesson"
+        update_url = reverse("site_content:update-lesson", kwargs={"slug": test_content.slug}) # the slug is the same which I think is okay?
+
+        # add a lesson
+        response = self.client.post(update_url, data = form_data)
+        self.assertEqual(response.status_code, 302) 
+
+        # test the new lesson detail
+        self.assertFalse(Lesson.objects.filter(body="test body").exists()) # should not exist
+        detail_url = reverse("site_content:lesson-detail", kwargs={"slug": test_content.slug})
+        detail_response = self.client.get(detail_url)
+        self.assertContains(detail_response, "test number 2")
+
+    def test_lesson_update_bad_values(self):
+        """
+        Test to make sure the update lesson won't allow bad values
+        """
+        test_content = create_content("test") # make a entry that's to compare against
+        
+        # get url for the add a lesson page
+        url = reverse("site_content:add-a-lesson", kwargs={"slug": test_content.slug}) # including reverse in the url
+        
+        # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
+        # try with a blank value
+        form_data = {
+            "body": ""
+        }
+
+        # the post should be refused
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) 
+
+        #  try with just spaces
+        form_data = {
+            "body": "   "
+        }
+
+         # this should be refused too
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) 
+
+        #  try just one character
+        form_data = {
+            "body": "a"
+        }
+
+        # this should be refused too
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) 
+
+        # with a lot of punctuation
+        form_data = {
+            "body": "?><:''"
+        }
+
+        # this should be refused too
+        response = self.client.post(url, data = form_data)
+        self.assertEqual(response.status_code, 200) 
+
+
+    def test_duplicate_slugs(self):
+        """
+        Test that content on the website won't have duplicate slugs.
+        I think this is like super basic because unique = True but just have to be careful.
+        """
+        test_content = create_content("test")
+
+        with self.assertRaises(IntegrityError):
+            test_content_2 = create_content("test?")
+
+        
+
 class ContentAnonymousUserTests(TestCase):
     """
     Tests to be done if there is no user logged in
@@ -402,6 +579,46 @@ class ContentAnonymousUserTests(TestCase):
 
         # user will be automatically redirected
         self.assertEqual(response.status_code, 302) # <--- 302 for a redirect
+
+    def test_lesson_update_view_no_login(self): 
+        """
+        A user should not be allowed to add or edit a lesson if they aren't logged into the website
+        """
+        test_content = create_content("test_content")
+
+        # get url for the update entry page
+        url = reverse("site_content:add-a-lesson", kwargs={"slug": test_content.slug}) # including reverse in the url
+
+        # now the user can't even access the page
+        response = self.client.get(url)
+
+        # user will be automatically redirected
+        self.assertEqual(response.status_code, 302)
+
+        # if we add a lesson it still shouldn't work
+        test_lesson = Lesson.objects.create(content=test_content,body="test body",last_edit=timezone.now())
+
+        # url for viewing the lesson
+        url = reverse("site_content:lesson-detail", kwargs={"slug": test_lesson.slug})
+
+        # the user should be able to view 
+        response = self.client.get(url)
+
+        # user will shown the lesson page
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "test body")
+
+        # user shouldn't be able to view the lesson 
+        # url for viewing the lesson
+        url = reverse("site_content:update-lesson", kwargs={"slug": test_lesson.slug})
+
+        # the user should NOT be able to view 
+        response = self.client.get(url)
+
+        # user will shown the lesson page
+        self.assertEqual(response.status_code, 302)
+        #self.assertContains(response, "login")
+
 
 class ReaderViewTests(TestCase):
     """
@@ -466,3 +683,12 @@ class ReaderViewTests(TestCase):
         response = self.client.get(reverse("site_content:reader-view", kwargs={"slug": test_entry.slug}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "dollar sign")
+
+
+"""
+TEST TO DO:
+1. The lesson add might break if you try and add a lesson to a content that already has one idk, add view overwrites the existing lesson (DONE)
+2. deleting the content should delete the lesson (TRUE)
+3. if a word is deleted from the dictionary does it break reader view? (NO)
+4. test if update lesson works (DONE)
+"""

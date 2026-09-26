@@ -30,6 +30,7 @@
             <th>Word</th>
             <th>Translation</th>
             <th>Date Added</th>
+            <th>Added From</th>
         </tr>
     </thead>
     <tbody>
@@ -44,6 +45,12 @@
             <!-- 3. Pull the timestamp field straight off the ListAddition model row -->
             <td>{{ entry.added_at|date:"M d, Y" }}</td>
 
+            <!-- add a table column for the article that the word came from -->
+            {% if entry.added_from.title %}
+                <td><strong><a href="{% url 'site_content:reader-view' slug=entry.added_from.slug %}?highlight={{ entry.word.swahili_entry|urlencode }}" class="button">{{ entry.added_from }}</a></strong></td>
+            {% else %}
+                <td>Added from Dictionary</td>
+            {% endif %}
             <!-- add a delete view button -->
             <td>
                 <!-- post method means its skips the confirmation page, get brings us to the page -->

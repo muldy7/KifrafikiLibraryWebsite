@@ -1,0 +1,15 @@
+<!-- basic html template for the update form -->
+{% extends "base.html" %}
+
+{% block header %}
+    {{ form.media }} 
+{% endblock %}
+
+{% block content %}
+<!-- not sure how this is going to work we will see -->
+<h1>Making changes to the "{{object.content.title}}" Lesson</h1>
+<form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Update">
+</form>
+{% endblock %}

@@ -47,4 +47,40 @@
     <p></p>
     <button type="submit">Continue to Word Review</button>
 </form>
+
+<script>
+
+const urlParams = new URLSearchParams(window.location.search);
+const textarea = document.getElementById("content_body"); 
+const highlightWord = urlParams.get("highlight"); /// grab the highlight from the url
+
+if (highlightWord && textarea) {
+    const normalize = (str) => str
+        .replace(/[^a-zA-Z0-9\s]/g, "")
+        .toLowerCase();
+
+    const fullText = textarea.value;
+    const normalizedText = normalize(fullText);
+    const target = normalize(highlightWord);
+
+    const startIndex = normalizedText.indexOf(target);
+
+    if (startIndex !== -1) {
+        textarea.focus();
+        textarea.setSelectionRange(startIndex, startIndex + target.length);
+
+        // scroll the textarea so the selection is visible, roughly centered
+        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
+        const linesBefore = fullText.slice(0, startIndex).split("\n").length - 1;
+        textarea.scrollTop = Math.max(0, (linesBefore * lineHeight) - (textarea.clientHeight / 2));
+
+        // clear the selection after 5 seconds
+        setTimeout(() => {
+            textarea.setSelectionRange(startIndex + target.length, startIndex + target.length);
+            textarea.blur();
+        }, 5000);
+    }
+}
+
+</script>
 {% endblock %}

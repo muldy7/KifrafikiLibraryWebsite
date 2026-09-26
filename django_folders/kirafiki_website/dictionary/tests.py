@@ -596,6 +596,21 @@ class ContentEntryToolTests(TestCase):
         response = self.client.post(url, data_entry)
         self.assertEqual(response.status_code, 200)  # <---- will post a 200 if the post works correctly
         self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if the title is the same
+
+    def test_content_tool_similar_slugs(self):
+            """
+            Test if the content tool allows titles that are different but will create the same slug.
+            """
+            create_content("test", "test words") # add a test entry to the Content data base
+    
+            url = reverse("dictionary:add-content")
+    
+            data_entry = create_content_form_data("test?.()","test words") # try the same title but uppercase
+            
+            # submit the form with the data entry
+            response = self.client.post(url, data_entry)
+            self.assertEqual(response.status_code, 200)  # <---- will post a 200 no matter what
+            self.assertNotContains(response, "Review Words") # shouldn't get to the next stage if the title is the same
         
     def test_content_tool_no_content(self):
         """

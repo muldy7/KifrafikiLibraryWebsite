@@ -1,5 +1,6 @@
 from django.test import TestCase
 from dictionary.tests import create_basic_entry # need for create words to add to a user's list
+from site_content.tests import create_content # need to add some content so we can test "added_from"
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from .models import ListAddition, VocabularyList
@@ -169,11 +170,11 @@ class VocabularyListUserTests(TestCase):
         """
         Test to see if the delete a single list addiiton works
         """
-        create_basic_entry("test")
+        create_basic_entry("testing")
         test_word = create_basic_entry("another word")
 
         # add the first word
-        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "testing"})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302) # should redirect to home
 
@@ -199,18 +200,18 @@ class VocabularyListUserTests(TestCase):
         # make sure that "test" is still on the list
         url = reverse("vocabulary:my-vocab-list")
         response = self.client.get(url)
-        self.assertContains(response, "test")
+        self.assertContains(response, "testing")
         self.assertNotContains(response, "Your vocabulary list is empty. Start adding words!")
 
     def test_delete_entire_list(self):
         """
         Test to see if the delete the entire list works
         """
-        create_basic_entry("test")
+        create_basic_entry("testing")
         create_basic_entry("another word")
 
         # add the first word
-        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test"})
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "testing"})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302) # should redirect to home
 
@@ -235,7 +236,7 @@ class VocabularyListUserTests(TestCase):
         # make sure that "test" is still on the list
         url = reverse("vocabulary:my-vocab-list")
         response = self.client.get(url)
-        self.assertNotContains(response, "test")
+        self.assertNotContains(response, "testing")
         self.assertContains(response, "Your vocabulary list is empty. Start adding words!")
 
     def test_different_user_lists(self):
@@ -244,7 +245,7 @@ class VocabularyListUserTests(TestCase):
         from both lists,
 
         """
-        test_entry = create_basic_entry("test") # make a entry that's to compare against
+        test_entry = create_basic_entry("testing") # make a entry that's to compare against
 
         # add the first word
         url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": test_entry.swahili_entry})
@@ -279,7 +280,9 @@ class VocabularyListUserTests(TestCase):
         # make sure that "test" is not on user 2's list
         url = reverse("vocabulary:my-vocab-list")
         response = self.client.get(url)
-        self.assertNotContains(response, "test")
+
+        # haha since the website now says "Karibu, test_user" it will cause this test to fail so I have to change the word
+        self.assertNotContains(response, "testing")
         self.assertContains(response, "Your vocabulary list is empty. Start adding words!")
 
         # login original user
@@ -291,14 +294,78 @@ class VocabularyListUserTests(TestCase):
         self.assertContains(response, "test")
         self.assertNotContains(response, "Your vocabulary list is empty. Start adding words!")
 
+    def test_added_from(self):
+        """
+        With the new "added_from" column, words added from the dictionary should say "added from dictionary" but words
+        added from reader view should have a link to the content they came from.
+        In this test we will mock the data that is grabbed from 'HTTP_REFERER'
+        """
+        # create entries to add to the list 
+        create_basic_entry("test word")
+        create_basic_entry("test 2")
 
+        # add the first word to the list
+        url = reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test word"})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # should redirect to home
 
+        # check the list 
+        list_url = reverse("vocabulary:my-vocab-list")
+        response = self.client.get(list_url)
+        self.assertContains(response, "Added from Dictionary")
+
+        # make a content that we can pretend we're adding from
+        test_content = create_content("test content")
+
+        # make the urls
+        fake_url = reverse("site_content:reader-view", kwargs={"slug": test_content.slug })
+        add_word_url =  reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test 2"})
+
+        # added a second word this time pretending we're coming from reader view
+        response = self.client.get(
+            add_word_url, 
+            HTTP_REFERER=fake_url
+        )
+
+        # check the list again
+        response = self.client.get(list_url)
+        self.assertContains(response, "test content")
+
+    def test_highlight_url(self):
+        """
+        When "?highlight=" is added to the url it can cause problems. Make sure that the views detects the change and 
+        it should still direct to the correct content from the vocabulary list. 
+        """
+        # create the entry 
+        create_basic_entry("test word")
+
+        # make a content that we can pretend we're adding from
+        test_content = create_content("test content")
+
+        # make the urls
+        list_url = reverse("vocabulary:my-vocab-list")
+        fake_url = reverse("site_content:reader-view", kwargs={"slug": test_content.slug })
+        highlight_url = fake_url + "?highlight=test word"
+        #print(highlight_url)
+        add_word_url =  reverse("vocabulary:add-vocabulary-word", kwargs={"word": "test word"})
+
+        # added a second word this time pretending we're coming from reader view
+        response = self.client.get(
+            add_word_url, 
+            HTTP_REFERER=highlight_url
+        )
+
+        # check the list again
+        response = self.client.get(list_url)
+        self.assertContains(response, "test content")
+
+# going to be a problem if a user adds a word from the dictionary and not reader view
 """
 WORK PLAN:
 1. make test for what is working (DONE)
 2. add delete button and clickable link to the vocab list (DONE)
 3. make vocab list button in the sidebar (DONE)
-4. make an export to anki or csv button
+4. make an export to anki or csv button (DONE)
 5. have fun!
 6. only ask ai when im supeer stuck and have it look for issues instead of it just telling me what to do. I should understand
 7. put stuff in the footer
