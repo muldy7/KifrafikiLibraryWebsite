@@ -194,8 +194,10 @@ class LessonUpdateView(SuccessMessageMixin,LoginRequiredMixin,UpdateView): # suc
         if form.has_changed():
             self.object = form.save(commit=False)
 
+            #print(self.kwargs['slug'])
             # get the correct content for the view from the kew word arguments
-            self.object.content = Content.objects.get(title=self.kwargs['slug'])
+            # this was a bug since it should've been "slug" not title but idk why tests didn't catch it
+            self.object.content = Content.objects.get(slug=self.kwargs['slug'])
 
             # 2. Inject your automatic data changes
             self.object.last_edit = timezone.now() 

@@ -463,7 +463,7 @@ class ContentUserTests(TestCase):
         response = self.client.post(url, data = form_data)
         self.assertEqual(response.status_code, 302) 
 
-        # add a second lesson
+        # update the lesson
         # the lesson is just added with what is written in the body and everything else comes from the slug (which should be unique)
         form_data = {
             "body": "test number 2"
