@@ -5,6 +5,7 @@ from django_ckeditor_5.fields import CKEditor5Field
 
 # IMPORTANT LINKS
 # https://docs.djangoproject.com/en/6.1/topics/db/examples/one_to_one/
+
 # Create your models here.
 # model for the content hosted on the website that will include the text wrapping and all that
 
