@@ -5,9 +5,10 @@ This code is for creating a free crowd-sourced website for leanring the Swahili 
 1. [kamusi](https://github.com/Kalebu/kamusi) - To source words to be used on the website
 
 ## Prerequisites 
-1. PostgreSQL Database - [postgreSQL Tutorial](https://www.w3schools.com/postgresql/)
-2. This website uses the django framework, a helpful tutorial can be found here: [Django Tutorial](https://docs.djangoproject.com/en/6.1/intro/tutorial01/)
-3. The translation tool on the website uses DeepL for translation. If you want to use the website with your own API key, one can be made for free here: [Deepl API](https://www.deepl.com/en/products/api)
+1. PostgreSQL Database - [PostgreSQL Tutorial](https://www.w3schools.com/postgresql/)
+   * [Adding PostgreSQL to Django](https://www.w3schools.com/django/django_db_connect.php)
+3. This website uses the django framework, a helpful tutorial can be found here: [Django Tutorial](https://docs.djangoproject.com/en/6.1/intro/tutorial01/)
+4. The translation tool on the website uses DeepL for translation. If you want to use the website with your own API key, one can be made for free here: [Deepl API](https://www.deepl.com/en/products/api)
 
 ## Running the website
 Once the postgreSQL database is installed, follow the follow steps to start the website: 
