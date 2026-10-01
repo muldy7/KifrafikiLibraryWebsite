@@ -47,7 +47,6 @@ class DictionaryListView(ListView):
         return queryset
     
 # just copied this over from from views in site_content since it's super similar 
-# this page REQUIRES LOGIN
 class DictionaryDetailView(DetailView):
     """Shows a single word, looked up by its slug."""
     model = DictionaryEntry # from the site_content model page
