@@ -3,7 +3,7 @@
 # # from pymongo import MongoClient
 
 # # # Connect to MongoDB client
-# # client = MongoClient("mongodb+srv://abe_db_user:BYgiV2Ysm8oK9y5u@kirafikicluster.k0x7uss.mongodb.net/") # connect to online database
+# # client = MongoClient("MONGO_API_KEY") # connect to online database
 # # db = client["dictionary"]   # load the specific database
 # # collection = db["sw_en"]    # load the collection in the database
 

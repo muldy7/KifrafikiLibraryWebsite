@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 def get_database():
-    CONNECTION_STRING = "mongodb+srv://abe_db_user:<BYgiV2Ysm8oK9y5u>@kirafikicluster.k0x7uss.mongodb.net/"
+    CONNECTION_STRING = MONGO_API_KEY
 
     client = MongoClient(CONNECTION_STRING)
 

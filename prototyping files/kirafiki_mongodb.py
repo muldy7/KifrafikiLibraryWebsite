@@ -16,7 +16,7 @@ from pymongo.errors import NetworkTimeout
 # BYgiV2Ysm8oK9y5u
 
 # Connect to MongoDB client
-client = MongoClient("mongodb+srv://abe_db_user:BYgiV2Ysm8oK9y5u@kirafikicluster.k0x7uss.mongodb.net/", timeoutMS = 2000) # connect to online database, with timeout
+client = MongoClient(MONGO_API_KEY, timeoutMS = 2000) # connect to online database, with timeout
 db_dict = client["dictionary"]   # load the specific database
 
 # load the swahili to english collection

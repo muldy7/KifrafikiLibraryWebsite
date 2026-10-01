@@ -315,7 +315,7 @@ def simple_translate(text):
 
     try:
         # Use translation fallback to GoogleTranslate
-        #definition = DeeplTranslator(api_key="f25f4efb-0e72-49e7-9ff5-d24c9c4841c5:fx", source = "da", target = "en", use_free_api=True).translate(text)
+        #definition = DeeplTranslator(api_key=auth_key, source = "da", target = "en", use_free_api=True).translate(text)
         #definition = GoogleTranslator(source='sw', target='en').translate(text)
         #source = "GoogleAPI" 
         result = deepl_client.translate_text(text, target_lang="EN-US")
