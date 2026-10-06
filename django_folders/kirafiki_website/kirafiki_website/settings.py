@@ -132,8 +132,9 @@ else:
         'default': dj_database_url.config(
                 default=os.environ.get('DATABASE_URL'),
                 # Fallback to local database if DATABASE_URL environment variable doesn't exist
-                conn_max_age=600,
+                conn_max_age=0,
                 ssl_require=True,
+                
             )
     }
 
