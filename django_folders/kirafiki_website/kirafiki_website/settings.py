@@ -28,7 +28,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3qhma9@d&-y58s=m83473-6c8@i!(a=&_k$hjs-(+xq!wrd+x2'
+# make sure the secret key is stored in the environment variables
+SECRET_KEY = os.environ['DJANGO_SECRET_KEY'] 
+
+# get the secret key from render if we aren't hosting the website locally
+if not SECRET_KEY:
+    os.environ.get('RENDER_SECRET_KEY')
 
 # have to allow different websites when its posted online
 # Adds Render's external hostname if it exists, otherwise defaults to localhost
