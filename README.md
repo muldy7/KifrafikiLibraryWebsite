@@ -3,6 +3,7 @@ This code is for creating a free crowd-sourced website for leanring the Swahili 
 
 ## GitHub Libraries Used 
 1. [kamusi](https://github.com/Kalebu/kamusi) - To source words to be used on the website
+2. [genanki](https://github.com/kerrickstaley/genanki) - For creating Anki flash card decks
 
 ## Prerequisites 
 1. PostgreSQL Database - [PostgreSQL Tutorial](https://www.w3schools.com/postgresql/)
