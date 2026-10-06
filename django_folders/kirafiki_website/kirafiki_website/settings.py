@@ -130,9 +130,10 @@ else:
     # I think I can change this so it auto changes the database if it is hosted locally. 
     DATABASES = {
         'default': dj_database_url.config(
+                default=os.environ.get('DATABASE_URL'),
                 # Fallback to local database if DATABASE_URL environment variable doesn't exist
-                default='postgresql://postgres:postgres@localhost:5432/kirafiki_websitedb',
-                conn_max_age=600
+                conn_max_age=600,
+                ssl_require=True
             )
     }
 
