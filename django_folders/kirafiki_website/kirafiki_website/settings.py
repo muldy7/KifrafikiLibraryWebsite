@@ -29,11 +29,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # make sure the secret key is stored in the environment variables
-SECRET_KEY = os.environ['DJANGO_SECRET_KEY'] 
+load_dotenv() # load from the .env file
+
+# a new secret key can be generated with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') # get the secret key from the .env file
 
 # get the secret key from render if we aren't hosting the website locally
 if not SECRET_KEY:
-    os.environ.get('RENDER_SECRET_KEY')
+    SECRET_KEY = os.environ.get('RENDER_SECRET_KEY')
 
 # have to allow different websites when its posted online
 # Adds Render's external hostname if it exists, otherwise defaults to localhost
